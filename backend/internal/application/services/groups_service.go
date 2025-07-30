@@ -100,3 +100,13 @@ func (s *groupService) GetGroupInfo(ctx context.Context, groupID int) (*models.G
 func (s *groupService) CreateGroupEvent(ctx context.Context, event *models.GroupEvent) error {
 	return s.repo.InsertGroupEvent(ctx, event)
 }
+
+// internal/application/services/group_service.go
+
+func (s *groupService) GetGroupMembers(ctx context.Context, groupID int) ([]models.GroupMemberInfo, error) {
+	return s.repo.FetchGroupMembers(ctx, groupID)
+}
+
+func (s *groupService) IsAlreadyMember(ctx context.Context, groupID int, userID int) (bool, error) {
+	return s.repo.IsAlreadyMember(ctx, groupID, userID)
+}

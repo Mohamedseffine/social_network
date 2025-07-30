@@ -55,7 +55,6 @@ func (r *GroupRepository) CreateGroup(ctx context.Context, g *models.Group) erro
 	return tx.Commit()
 }
 
-
 func (r *GroupRepository) GetAllGroupsForUser(ctx context.Context, userID int) ([]models.GroupWithUserFlags, error) {
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT
@@ -200,7 +199,6 @@ func (r *GroupRepository) GetUserRole(ctx context.Context, groupID, userID int) 
 	return role, nil
 }
 
-
 // GetPostsForGroup returns posts for a specific group including the user_name
 func (r *GroupRepository) GetGroupPosts(ctx context.Context, groupID int) ([]models.GroupPost, error) {
 	rows, err := r.db.QueryContext(ctx, `
@@ -285,3 +283,35 @@ func (r *GroupRepository) InsertGroupEvent(ctx context.Context, event *models.Gr
 	return err
 }
 
+// internal/adapters/db/group_repository.go
+
+func (r *GroupRepository) FetchGroupMembers(ctx context.Context, groupID int) ([]models.GroupMemberInfo, error) {
+	query := `
+		SELECT 
+	u.id AS user_id,
+	u.user_name,
+	u.first_name || ' ' || u.last_name AS nick_name,
+	COALESCE(u.avatar_path, '') AS avatar_path,
+	gm.created_at AS joined_at
+		FROM group_members gm
+		JOIN users u ON gm.user_id = u.id
+		WHERE gm.group_id = ? AND gm.status = 'accepted'
+		ORDER BY gm.created_at ASC
+	`
+
+	rows, err := r.db.QueryContext(ctx, query, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var members []models.GroupMemberInfo
+	for rows.Next() {
+		var m models.GroupMemberInfo
+		if err := rows.Scan(&m.UserID, &m.UserName, &m.NickName, &m.AvatarPath, &m.JoinedAt); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	return members, nil
+}

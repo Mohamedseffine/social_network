@@ -64,3 +64,11 @@ type GroupEvent struct {
 	CreatedAt   string `json:"created_at"`
 	UpdatedAt   string `json:"updated_at"`
 }
+
+type GroupMemberInfo struct {
+	UserID     int    `json:"user_id"`
+	UserName   string `json:"user_name"`
+	NickName   string `json:"nick_name"`
+	AvatarPath string `json:"avatar_path"`
+	JoinedAt   string `json:"joined_at"`
+}

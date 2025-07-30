@@ -102,6 +102,8 @@ func (h *GroupHandler) DynamicRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if strings.HasSuffix(r.URL.Path, "/create_event") {
 		h.CreateGroupEvent(w, r)
+	} else if strings.HasSuffix(r.URL.Path, "/group_members"){
+		h.FetchGroupMembers(w, r)
 	}
 
 }
@@ -375,4 +377,54 @@ func (h *GroupHandler) CreateGroupEvent(w http.ResponseWriter, r *http.Request) 
 	}
 
 	utils.ResponseJSON(w, http.StatusCreated, event)
+}
+
+// internal/adapters/http/handlers/group_handler.go
+
+func (h *GroupHandler) FetchGroupMembers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method Not Allowed"})
+		return
+	}
+
+	// ✅ Get user ID from session
+	userID, err := utils.GetCurrentUserID(r, h.sessionService)
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"error": "Unauthorized"})
+		return
+	}
+
+	// ✅ Extract group ID from path
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 5 {
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid group ID"})
+		return
+	}
+	groupID, err := strconv.Atoi(parts[3])
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid group ID"})
+		return
+	}
+
+	// ✅ Check if the user is a member
+	isMember, err := h.groupService.IsAlreadyMember(r.Context(), groupID, userID)
+	if err != nil {
+		fmt.Println("Error checking membership:", err)
+		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": "Server error"})
+		return
+	}
+	if !isMember {
+		utils.ResponseJSON(w, http.StatusForbidden, map[string]any{"error": "You are not a member of this group"})
+		return
+	}
+
+	// ✅ Fetch members
+	members, err := h.groupService.GetGroupMembers(r.Context(), groupID)
+	if err != nil {
+		fmt.Println("Error fetching members:", err)
+		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": "Could not fetch members"})
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, members)
 }

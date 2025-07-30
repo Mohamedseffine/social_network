@@ -20,4 +20,5 @@ type GroupRepository interface {
 	GetGroupEvents(ctx context.Context, groupID int) ([]models.GroupEvent, error)
 	GetGroupInfo(ctx context.Context, groupID int) (*models.GroupInfo, error)
 	InsertGroupEvent(ctx context.Context, event *models.GroupEvent) error
+	FetchGroupMembers(ctx context.Context, groupID int) ([]models.GroupMemberInfo, error)
 }

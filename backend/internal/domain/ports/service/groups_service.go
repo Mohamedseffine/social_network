@@ -17,4 +17,6 @@ type GroupService interface {
 	GetGroupPosts(ctx context.Context, groupID int) ([]models.GroupPost, error)
 	GetGroupInfo(ctx context.Context, groupID int) (*models.GroupInfo, error)
 	CreateGroupEvent(ctx context.Context, event *models.GroupEvent) error
+	GetGroupMembers(ctx context.Context, groupID int) ([]models.GroupMemberInfo, error)
+	IsAlreadyMember(ctx context.Context, groupID int, userID int) (bool, error)
 }

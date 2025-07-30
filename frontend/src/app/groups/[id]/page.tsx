@@ -34,20 +34,47 @@ interface GroupInfo {
   events_count: number;
 }
 
+interface GroupMember {
+  id: number;
+  user_name: string;
+  avatar_url: string | null;
+  role: 'admin' | 'member';
+  joined_at: string;
+}
+
+
 export default function GroupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [activeTab, setActiveTab] = useState('posts');
   const [posts, setPosts] = useState<Post[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
+  const [members, setMembers] = useState<GroupMember[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingGroupInfo, setLoadingGroupInfo] = useState(true);
+  const [loadingMembers, setLoadingMembers] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-   // Move these hooks to the top level
+  const [membersError, setMembersError] = useState<string | null>(null);
   const [showCreateEventModal, setShowCreateEventModal] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
+
+  const fetchGroupMembers = async () => {
+    setLoadingMembers(true);
+    setMembersError(null);
+    try {
+      const res = await fetch(`http://localhost:8080/api/groups/${id}/group_members`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to fetch group members');
+      const data = await res.json();
+      setMembers(data);
+    } catch (err: any) {
+      setMembersError(err.message);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchGroupInfo() {
@@ -69,7 +96,9 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
 
     async function fetchPosts() {
       try {
-        const res = await fetch(`http://localhost:8080/api/groups/${id}/posts`, { credentials: 'include' });
+        const res = await fetch(`http://localhost:8080/api/groups/${id}/posts`, { 
+          credentials: 'include' 
+        });
         if (!res.ok) throw new Error('Failed to fetch posts');
         const data = await res.json();
         setPosts(data);
@@ -84,7 +113,9 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
 
     async function fetchEvents() {
       try {
-        const res = await fetch(`http://localhost:8080/api/groups/${id}/events`, { credentials: 'include' });
+        const res = await fetch(`http://localhost:8080/api/groups/${id}/events`, { 
+          credentials: 'include' 
+        });
         if (!res.ok) throw new Error('Failed to fetch events');
         const data = await res.json();
         setEvents(data);
@@ -101,6 +132,12 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
     fetchPosts();
     fetchEvents();
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === 'members') {
+      fetchGroupMembers();
+    }
+  }, [activeTab, id]);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -202,11 +239,52 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
           </div>
         );
       case 'members':
-        return (
-          <div className={styles.tabContent}>
-            <p className={styles.placeholder}>Member list will appear here.</p>
-          </div>
-        );
+  return (
+    <div className={styles.tabContent}>
+      <h2>Group Members</h2>
+      
+      {loadingMembers ? (
+        <div className={styles.loading}>
+          <div className={styles.spinner}></div>
+          <p>Loading members...</p>
+        </div>
+      ) : membersError ? (
+        <p className={styles.error}>{membersError}</p>
+      ) : members.length === 0 ? (
+        <p className={styles.placeholder}>No members found in this group.</p>
+      ) : (
+        <div className={styles.membersList}>
+          {members.map(member => (
+            <div key={member.id} className={styles.memberCard}>
+              <div className={styles.memberAvatar}>
+                {member.avatar_url ? (
+                  <img 
+                    src={`http://localhost:8080/${member.avatar_url}`} 
+                    alt={member.user_name} 
+                  />
+                ) : (
+                  <div className={styles.avatarPlaceholder}>
+                    {member.user_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className={styles.memberInfo}>
+                <h3 className={styles.memberUsername}>
+                  {member.user_name}
+                  {member.role === 'admin' && (
+                    <span className={styles.adminBadge}>Admin</span>
+                  )}
+                </h3>
+                <p className={styles.memberJoined}>
+                  Joined: {new Date(member.joined_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
       case 'chat':
         return (
           <div className={styles.tabContent}>
