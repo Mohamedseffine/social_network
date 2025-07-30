@@ -85,7 +85,6 @@ func (s *UserServiceImpl) GetFullProfile(userID int) (*models.FullProfileRespons
 
 // ✅ NEW: GetFullProfileData with viewerID (could be used later for isFollowing logic)
 func (s *UserServiceImpl) GetFullProfileData(viewerID, profileOwnerID int) (*models.FullProfileResponse, error) {
-	fmt.Println("cccccccccc",profileOwnerID)
 	user, err := s.userRepo.GetUserByID(profileOwnerID)
 	if err != nil {
 		return nil, err

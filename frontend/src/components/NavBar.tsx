@@ -30,7 +30,6 @@ export default function NavBar() {
             const data = await response.json()
             setSearchResults(data)
           } else {
-            console.error('Failed to fetch users:', response.statusText)
             setSearchResults([])
           }
         } catch (error) {
@@ -67,10 +66,6 @@ export default function NavBar() {
     }
   }
 
-  const getAvatarUrl = (url?: string) => {
-    if (!url) return null
-    return url.startsWith('http') ? url : `http://localhost:8080${url}`
-  }
 
   if (loading) return null
 
@@ -95,7 +90,7 @@ export default function NavBar() {
               </svg>
             </button>
 
-            {searchResults.length > 0 && (
+            {Array.isArray(searchResults) && searchResults.length > 0 ? (
               <div className={styles.searchResults}>
                 {searchResults.map((user) => (
                   <Link
@@ -104,19 +99,32 @@ export default function NavBar() {
                     className={styles.searchResultItem}
                   >
                     {user.avatarUrl ? (
-                      <img 
-                        src={getAvatarUrl(user.avatarUrl) || ''} 
-                        alt={user.username} 
-                        className={styles.searchResultAvatar} 
+                      <img
+                        src={`http://localhost:8080/${user.avatarUrl}`}
+                        alt={user.username}
+                        className={styles.searchResultAvatar}
                       />
                     ) : (
                       <div className={styles.searchResultInitials}>
                         {user.username.charAt(0).toUpperCase()}
                       </div>
                     )}
-                    <span>{user.username}</span>
+                    <div className={styles.searchResultInfo}>
+                      <span className={styles.searchResultUsername}>{user.username}</span>
+                      {user.firstName && user.lastName && (
+                        <span className={styles.searchResultName}>
+                          {user.firstName} {user.lastName}
+                        </span>
+                      )}
+                    </div>
                   </Link>
                 ))}
+              </div>
+            ) : searchQuery.length > 0 && (
+              <div className={styles.searchResults}>
+                <div className={styles.searchResultsEmpty}>
+                  No results found for "{searchQuery}"
+                </div>
               </div>
             )}
           </div>
@@ -131,10 +139,10 @@ export default function NavBar() {
 
             <button className={styles.profileButton} onClick={handleProfileClick}>
               {user.avatarUrl ? (
-                <img 
+                <img
                   src={`http://localhost:8080/${user.avatarUrl}`}
-                  alt="Profile" 
-                  className={styles.profileImage} 
+                  alt="Profile"
+                  className={styles.profileImage}
                 />
               ) : (
                 <div className={styles.profileInitials}>

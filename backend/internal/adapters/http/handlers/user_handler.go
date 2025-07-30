@@ -36,13 +36,6 @@ func stringPtr(s string) *string {
 	return &s
 }
 
-func (h *UserHandler) DynamicRoutes(w http.ResponseWriter, r *http.Request) {
-	if strings.HasSuffix(r.URL.Path, "/profile") {
-		h.GetUserProfileByUsername(w, r)
-		return
-	}
-}
-
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Register handler called")
 	if r.Method != http.MethodPost {
@@ -205,23 +198,6 @@ func (userHandler *UserHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	utils.ResponseJSON(w, http.StatusOK, map[string]string{"success": "true"})
 }
 
-// Create a function to check if the user has a session:
-func (h *UserHandler) CheckSession(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not alowed"})
-		return
-	}
-
-	// Check if the user has a valid session
-	_, err := utils.GetCurrentUserID(r, h.sessionService)
-	if err != nil {
-		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "invalid token"})
-		return
-	}
-
-	utils.ResponseJSON(w, http.StatusOK, map[string]string{"message": "User has a valid session"})
-}
-
 func (h *UserHandler) GetFullProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "method not allowed"})
@@ -298,6 +274,7 @@ func (h *UserHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 
 	users, err := h.userService.SearchUsers(query)
 	if err != nil {
+		fmt.Println(err)
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
@@ -308,6 +285,12 @@ func (h *UserHandler) SearchUsers(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUserProfileByUsername(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
+		return
+	}
+
+	_, err := utils.GetCurrentUserID(r, h.sessionService)
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"error": "Unauthorized"})
 		return
 	}
 

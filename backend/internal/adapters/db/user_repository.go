@@ -111,7 +111,7 @@ func (r *UserRepositoryImpl) UpdatePrivacyStatus(userID int, privacyStatus strin
 func (r *UserRepositoryImpl) SearchUsers(query string) ([]models.UserProfileDTO, error) {
 	searchQuery := "%" + query + "%"
 	sql := `
-		SELECT id, user_name, first_name, last_name
+		SELECT id, user_name, first_name, last_name, avatar_path
 		FROM users
 		WHERE user_name LIKE ? OR first_name LIKE ? OR last_name LIKE ?
 		LIMIT 20
@@ -125,7 +125,7 @@ func (r *UserRepositoryImpl) SearchUsers(query string) ([]models.UserProfileDTO,
 	var users []models.UserProfileDTO
 	for rows.Next() {
 		var dto models.UserProfileDTO
-		if err := rows.Scan(&dto.Id, &dto.UserName, &dto.FirstName, &dto.LastName); err != nil {
+		if err := rows.Scan(&dto.Id, &dto.UserName, &dto.FirstName, &dto.LastName, &dto.AvatarUrl); err != nil {
 			return nil, err
 		}
 		users = append(users, dto)
