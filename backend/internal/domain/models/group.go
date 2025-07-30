@@ -17,8 +17,8 @@ type GroupWithUserFlags struct {
 	Description string    `json:"description"`
 	CreatorID   int       `json:"creator_id"`
 	CreatedAt   time.Time `json:"created_at"`
-	IsCreator bool `json:"is_creator"`
-	IsMember  bool `json:"is_member"`
+	IsCreator   bool      `json:"is_creator"`
+	IsMember    bool      `json:"is_member"`
 }
 
 type GroupJoinRequest struct {
@@ -29,20 +29,20 @@ type GroupJoinRequest struct {
 }
 
 type GroupMember struct {
-	ID       int
-	GroupID  int
-	UserID   int
-	Status   string
-	Role     string
+	ID      int
+	GroupID int
+	UserID  int
+	Status  string
+	Role    string
 }
 
 type GroupPost struct {
-	ID        int       `json:"id"`
-	Content   string    `json:"content"`
-	CreatedAt string    `json:"created_at"`
-	ImagePath *string   `json:"image_path,omitempty"`
-	UserID    int       `json:"user_id"`
-	UserName  string    `json:"user_name"`
+	ID        int     `json:"id"`
+	Content   string  `json:"content"`
+	CreatedAt string  `json:"created_at"`
+	ImagePath *string `json:"image_path,omitempty"`
+	UserID    int     `json:"user_id"`
+	UserName  string  `json:"user_name"`
 }
 
 type GroupInfo struct {
@@ -71,4 +71,5 @@ type GroupMemberInfo struct {
 	NickName   string `json:"nick_name"`
 	AvatarPath string `json:"avatar_path"`
 	JoinedAt   string `json:"joined_at"`
+	Role       string `json:"role"`
 }

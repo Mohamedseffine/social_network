@@ -292,7 +292,8 @@ func (r *GroupRepository) FetchGroupMembers(ctx context.Context, groupID int) ([
 	u.user_name,
 	u.first_name || ' ' || u.last_name AS nick_name,
 	COALESCE(u.avatar_path, '') AS avatar_path,
-	gm.created_at AS joined_at
+	gm.created_at AS joined_at,
+	role
 		FROM group_members gm
 		JOIN users u ON gm.user_id = u.id
 		WHERE gm.group_id = ? AND gm.status = 'accepted'
@@ -308,7 +309,7 @@ func (r *GroupRepository) FetchGroupMembers(ctx context.Context, groupID int) ([
 	var members []models.GroupMemberInfo
 	for rows.Next() {
 		var m models.GroupMemberInfo
-		if err := rows.Scan(&m.UserID, &m.UserName, &m.NickName, &m.AvatarPath, &m.JoinedAt); err != nil {
+		if err := rows.Scan(&m.UserID, &m.UserName, &m.NickName, &m.AvatarPath, &m.JoinedAt, &m.Role); err != nil {
 			return nil, err
 		}
 		members = append(members, m)
