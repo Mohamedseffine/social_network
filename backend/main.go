@@ -59,7 +59,7 @@ func main() {
 	r.AddRoute("POST", "/api/register", userHandler.Register)
 	r.AddRoute("POST", "/api/login", userHandler.Login)
 	r.AddRoute("POST", "/api/logout", userHandler.Logout)
-	r.AddRoute("GET", "/api/check-session", userHandler.CheckSession)
+	r.AddRoute("GET", "/api/check-session", userHandler.GetFullProfile)
 
 	// profile
 	r.AddRoute("GET", "/api/profile", userHandler.GetFullProfile)
@@ -67,6 +67,7 @@ func main() {
 	r.AddRoute("GET", "/api/search_users", userHandler.SearchUsers)
 	r.AddRoute("GET", "/api/user/by_username", userHandler.GetUserProfileByUsername)
 	r.AddRoute("GET", "/api/profile/another", userHandler.GetAnotherProfile)
+	r.AddPrefixRoute("GET", "/api/users/profile/", userHandler.GetUserProfileByUsername)
 
 	// Follow routes
 	r.AddRoute("POST", "/api/follow", followHandler.CreateFollow)

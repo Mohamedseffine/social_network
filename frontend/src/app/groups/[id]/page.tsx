@@ -59,6 +59,8 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
   const [showCreateEventModal, setShowCreateEventModal] = useState(false);
   const [showCreatePostModal, setShowCreatePostModal] = useState(false);
 
+  console.log("posts : ", posts)
+
   const fetchGroupMembers = async () => {
     setLoadingMembers(true);
     setMembersError(null);

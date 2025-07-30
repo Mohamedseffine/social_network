@@ -1,16 +1,16 @@
 'use client'
-import styles from './css/HomePage.module.css'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
-import { useRouter } from 'next/navigation'
+import styles from './css/HomePage.module.css'
 
 interface User {
-  id: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  avatarUrl?: string;
+  id: string
+  username: string
+  firstName?: string
+  lastName?: string
+  avatarUrl?: string
 }
 
 export default function NavBar() {
@@ -18,6 +18,8 @@ export default function NavBar() {
   const { isAuthenticated, loading, logout, user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<User[]>([])
+
+  console.log('Auth state:', { isAuthenticated, loading, user })
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -56,6 +58,20 @@ export default function NavBar() {
     }
   }
 
+  const handleProfileClick = () => {
+    if (user?.username) {
+      router.push(`/profile/${user.username}`)
+    } else {
+      console.warn('Username not available, redirecting to generic profile')
+      router.push('/profile')
+    }
+  }
+
+  const getAvatarUrl = (url?: string) => {
+    if (!url) return null
+    return url.startsWith('http') ? url : `http://localhost:8080${url}`
+  }
+
   if (loading) return null
 
   return (
@@ -64,7 +80,7 @@ export default function NavBar() {
         SocialCircle
       </Link>
 
-      {isAuthenticated && (
+      {isAuthenticated && user && (
         <>
           <div className={styles.searchBar}>
             <input
@@ -88,7 +104,11 @@ export default function NavBar() {
                     className={styles.searchResultItem}
                   >
                     {user.avatarUrl ? (
-                      <img src={user.avatarUrl} alt={user.username} className={styles.searchResultAvatar} />
+                      <img 
+                        src={getAvatarUrl(user.avatarUrl) || ''} 
+                        alt={user.username} 
+                        className={styles.searchResultAvatar} 
+                      />
                     ) : (
                       <div className={styles.searchResultInitials}>
                         {user.username.charAt(0).toUpperCase()}
@@ -109,12 +129,16 @@ export default function NavBar() {
               <span className={styles.notificationBadge}>3</span>
             </button>
 
-            <button className={styles.profileButton} onClick={() => router.push('/profile')}>
-              {user?.avatarUrl ? (
-                <img src={user.avatarUrl} alt="Profile" className={styles.profileImage} />
+            <button className={styles.profileButton} onClick={handleProfileClick}>
+              {user.avatarUrl ? (
+                <img 
+                  src={`http://localhost:8080/${user.avatarUrl}`}
+                  alt="Profile" 
+                  className={styles.profileImage} 
+                />
               ) : (
                 <div className={styles.profileInitials}>
-                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                  {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                 </div>
               )}
             </button>

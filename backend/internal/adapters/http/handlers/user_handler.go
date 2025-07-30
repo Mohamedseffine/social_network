@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"social_network/internal/adapters/http/utils"
@@ -33,6 +34,13 @@ func stringPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func (h *UserHandler) DynamicRoutes(w http.ResponseWriter, r *http.Request) {
+	if strings.HasSuffix(r.URL.Path, "/profile") {
+		h.GetUserProfileByUsername(w, r)
+		return
+	}
 }
 
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -303,9 +311,14 @@ func (h *UserHandler) GetUserProfileByUsername(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	username := r.URL.Query().Get("username")
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 5 {
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Username missing in path"})
+		return
+	}
+	username := parts[4]
 	if username == "" {
-		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "username is required"})
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Username is required"})
 		return
 	}
 
@@ -319,6 +332,7 @@ func (h *UserHandler) GetUserProfileByUsername(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	// ✅ Respond
 	utils.ResponseJSON(w, http.StatusOK, user)
 }
 
