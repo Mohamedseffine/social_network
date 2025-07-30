@@ -81,7 +81,11 @@ func (h *GroupHandler) FetchGroups(w http.ResponseWriter, r *http.Request) {
 // inside handlers/group_handler.go
 
 func (h *GroupHandler) DynamicRoutes(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.URL.Path)
+	_, err := utils.GetCurrentUserID(r, h.sessionService)
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"error": "unauthorized"})
+		return
+	}
 	if strings.HasSuffix(r.URL.Path, "/join") {
 		h.JoinGroup(w, r)
 		return
@@ -102,8 +106,10 @@ func (h *GroupHandler) DynamicRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if strings.HasSuffix(r.URL.Path, "/create_event") {
 		h.CreateGroupEvent(w, r)
+		return
 	} else if strings.HasSuffix(r.URL.Path, "/group_members"){
 		h.FetchGroupMembers(w, r)
+		return
 	}
 
 }
@@ -167,7 +173,6 @@ func (h *GroupHandler) FetchPendingRequests(w http.ResponseWriter, r *http.Reque
 	}
 	groupID, err := strconv.Atoi(parts[3])
 	if err != nil {
-		fmt.Println(err)
 		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid group ID"})
 		return
 	}
@@ -181,8 +186,6 @@ func (h *GroupHandler) FetchPendingRequests(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if !isCreator {
-		fmt.Println(err)
-
 		utils.ResponseJSON(w, http.StatusForbidden, map[string]any{"error": "Access denied"})
 		return
 	}

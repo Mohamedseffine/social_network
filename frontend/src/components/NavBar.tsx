@@ -19,7 +19,6 @@ export default function NavBar() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<User[]>([])
 
-  console.log('Auth state:', { isAuthenticated, loading, user })
 
   useEffect(() => {
     const fetchUsers = async () => {

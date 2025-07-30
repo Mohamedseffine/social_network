@@ -1,5 +1,4 @@
 // app/layout.tsx
-import './globals.css'
 import { ReactNode } from 'react'
 import { AuthProvider } from '../components/AuthContext'
 import NavBar from '../components/NavBar'
