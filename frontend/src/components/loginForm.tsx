@@ -29,7 +29,11 @@ export default function LoginForm() {
         creds, {
         withCredentials: true // important to send and receive cookies:
       })
-      login() // Call the login function from AuthContext
+      const response = await axios.post('http://localhost:8080/api/login',
+        creds, {
+        withCredentials: true // important to send and receive cookies:
+      })
+      login(response.data.user) // Pass user data to login
       router.push('/')
     } catch (err) {
       setError('Login failed: Invalid email or password')
