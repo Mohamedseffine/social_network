@@ -6,7 +6,7 @@ import { useAuth } from './AuthContext'
 import styles from './css/HomePage.module.css'
 
 interface User {
-  id: string
+  id: number
   username: string
   firstName?: string
   lastName?: string
