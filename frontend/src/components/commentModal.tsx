@@ -69,9 +69,6 @@ export default function CommentModal({ postId, onClose }: CommentModalProps) {
       }
 
       const createdComment = await res.json();
-
-      // Append the new comment to the list
-      setComments((prev) => [...prev, createdComment]);
       setNewComment('');
     } catch (err) {
       console.error(err);
@@ -88,7 +85,7 @@ export default function CommentModal({ postId, onClose }: CommentModalProps) {
 
         {loading ? (
           <p>Loading comments...</p>
-        ) : comments.length === 0 ? (
+        ) : comments === null ? (
           <p>No comments yet.</p>
         ) : (
           <div className={styles.commentList}>
