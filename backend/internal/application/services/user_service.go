@@ -186,3 +186,7 @@ func (s *UserServiceImpl) GetAnotherProfile(viewerID int, profileOwnerUsername s
 
 	return resp, nil
 }
+
+func (s *UserServiceImpl) GetAllUsers() ([]models.UserProfileDTO, error) {
+    return s.userRepo.GetAllUsers()
+}
