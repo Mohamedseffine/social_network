@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"social_network/internal/domain/ports/service"
@@ -10,10 +11,12 @@ import (
 func GetCurrentUserID(r *http.Request, sessionService service.SessionService) (int, error) {
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
+		fmt.Println("Error retrieving session cookie:", err)
 		return 0, errors.New("missing session token")
 	}
 	userID, err := sessionService.GetUserIdFromSession(cookie.Value)
 	if err != nil {
+		fmt.Println("Error getting user ID from session:", err)
 		return 0, errors.New("invalid session")
 	}
 

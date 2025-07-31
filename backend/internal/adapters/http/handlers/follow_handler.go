@@ -24,6 +24,7 @@ func NewFollowHandler(followSvc service.FollowService, sessionSvc service.Sessio
 }
 
 	func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
+		
 		if r.Method != http.MethodPost {
 			utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
 			return
@@ -41,6 +42,7 @@ func NewFollowHandler(followSvc service.FollowService, sessionSvc service.Sessio
 		// Get the current user's ID from the session
 		followerID, err := utils.GetCurrentUserID(r, h.sessionService)
 		if err != nil {
+			fmt.Println("Error getting current user ID:", err)
 			utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"error": "Unauthorized"})
 			return
 		}

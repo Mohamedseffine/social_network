@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import styles from './css/FollowButton.module.css';
 
 interface FollowButtonProps {
-  username: string;
+  id: number;
 }
 
-const FollowButton: React.FC<FollowButtonProps> = ({ username }) => {
+const FollowButton: React.FC<FollowButtonProps> = ({ id }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,12 +15,13 @@ const FollowButton: React.FC<FollowButtonProps> = ({ username }) => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/follow/username', {
+      const response = await fetch('http://localhost:8080/api/follow', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ following_username: username }),
+        body: JSON.stringify({ following_id: id }),
+        credentials: 'include',
       });
 
       if (!response.ok) {

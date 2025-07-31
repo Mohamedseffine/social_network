@@ -10,8 +10,9 @@ fi
 
 TOKEN=$(cat session_token.txt | tr -d '[:space:]')
 
-response=$(curl -s -X POST "$API_URL" \
-  -H "Content-Type: application/json" \
+response=$(curl -s -X POST "$API_URL" 
+  -H "Content-Type: application/json" 
+  -b "session_token=$TOKEN" \
   -b "session_token=$TOKEN" \
   -d '{
     "following_id": '"$FOLLOWING_ID"'

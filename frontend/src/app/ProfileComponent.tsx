@@ -18,14 +18,23 @@ type UserProfileDTO = {
   joined?: string;
 };
 
-export default function ProfilePage({ params }: { params: { username: string } }) {
+type FollowerUser = {
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+};
+
+export default function ProfilePage({ username }: { username: string | undefined }) {
   const { user: authUser } = useAuth();
   const [user, setUser] = useState<UserProfileDTO | null>(null);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [followers, setFollowers] = useState<FollowerUser[]>([]);
+  const [following, setFollowing] = useState<FollowerUser[]>([]);
 
   const fetchProfile = async () => {
     try {
-      const res = await fetch(`/api/profile/another?username=${params.username}`);
+      const res = await fetch(`/api/profile/another?username=${username}`);
       const data = await res.json();
       setUser(data);
     } catch (err) {
@@ -35,24 +44,37 @@ export default function ProfilePage({ params }: { params: { username: string } }
 
   useEffect(() => {
     fetchProfile();
-  }, [params.username]);
+  }, [username]);
 
   useEffect(() => {
     if (authUser && user) {
       const isMe = authUser.username?.toLowerCase() === user.username?.toLowerCase();
       setIsOwnProfile(isMe);
-      console.log("authUser.username:", authUser.username);
-      console.log("user.username:", user.username);
-      console.log("isOwnProfile:", isMe);
     }
   }, [authUser, user]);
 
-  const fetchFollowers = () => {
-    alert("Show Followers clicked");
+  const fetchFollowers = async () => {
+    try {
+      const res = await fetch(`/api/follow/followers?username=${user?.username}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFollowers(data);
+      }
+    } catch (err) {
+      console.error('Error fetching followers', err);
+    }
   };
 
-  const fetchFollowing = () => {
-    alert("Show Following clicked");
+  const fetchFollowing = async () => {
+    try {
+      const res = await fetch(`/api/follow/following?username=${user?.username}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFollowing(data);
+      }
+    } catch (err) {
+      console.error('Error fetching following', err);
+    }
   };
 
   if (!user) return <div>Loading...</div>;
@@ -82,13 +104,39 @@ export default function ProfilePage({ params }: { params: { username: string } }
       <div className={styles["follow-controls"]}>
         {isOwnProfile ? (
           <>
-            <button onClick={fetchFollowers}>Show Followers</button>
-            <button onClick={fetchFollowing}>Show Following</button>
+            <button onClick={fetchFollowers}>Show Followers ({followers.length})</button>
+            <button onClick={fetchFollowing}>Show Following ({following.length})</button>
           </>
         ) : (
-          <FollowButton username={user.username} />
+            <>
+            <button onClick={fetchFollowers}>Show Followers ({followers.length})</button>
+            <button onClick={fetchFollowing}>Show Following ({following.length})</button>
+            <FollowButton id={user.id} />
+          </>
         )}
       </div>
+
+      {followers.length > 0 && (
+        <div className={styles.followList}>
+          <h3>Followers</h3>
+          <ul>
+            {followers.map((f) => (
+              <li key={f.id}>{f.firstName} {f.lastName} (@{f.username})</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {following.length > 0 && (
+        <div className={styles.followList}>
+          <h3>Following</h3>
+          <ul>
+            {following.map((f) => (
+              <li key={f.id}>{f.firstName} {f.lastName} (@{f.username})</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
