@@ -346,3 +346,18 @@ func (h *UserHandler) GetAnotherProfile(w http.ResponseWriter, r *http.Request) 
 
 	utils.ResponseJSON(w, http.StatusOK, resp)
 }
+
+func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
+        return
+    }
+
+    users, err := h.userService.GetAllUsers()
+    if err != nil {
+        utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+        return
+    }
+
+    utils.ResponseJSON(w, http.StatusOK, users)
+}
