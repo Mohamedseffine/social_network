@@ -43,7 +43,7 @@ func main() {
 	postService := services.NewPostService(postRepo)
 	groupsService := services.NewGroupService(groupsRepo)
 	webSocketService := services.NewWebSocketService(chatBroker, messageRepo, sessionRepo, userRepo)
-	// messagesSer := services.NewMessageService(messageRepo, sessionRepo)
+	messagesSer := services.NewMessageService(messageRepo, sessionRepo)
 
 	// Handlers
 	userHandler := handlers.NewUserHandler(userService, sessionService)
@@ -51,6 +51,7 @@ func main() {
 	postHandler := handlers.NewPostHandler(postService, sessionService)
 	groupsHandler := handlers.NewGroupHandler(groupsService, sessionService)
 	webSocketHandler := handlers.NewWebSocketHandler(webSocketService, sessionService)
+	messageHandler := handlers.NewMessagesHandler(messagesSer, sessionService)
 
 	// Router
 	r := router.NewRouter(sessionService)
@@ -93,8 +94,11 @@ func main() {
 	r.AddPrefixRoute("POST", "/api/groups/", groupsHandler.DynamicRoutes)
 	r.AddPrefixRoute("GET", "/api/groups/", groupsHandler.DynamicRoutes)
 
-	// Chat routes:
+	// Chat and messages routes:
 	r.AddRoute("GET", "/api/ws", webSocketHandler.SocketHandler)
+	r.AddRoute("GET", "/api/ws", webSocketHandler.SocketHandler)
+	// r.AddRoute("GET", "/api/chat_users", userHandler.GetChatUsers)
+	r.AddRoute("GET", "/api/messages", messageHandler.GetChatHistoryHandler)
 
 	// Start server
 	log.Println("🚀 Server running on http://localhost:8080")
