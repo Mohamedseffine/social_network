@@ -211,3 +211,30 @@ func (r *PostRepository) GetPostsByUserID(userID int) ([]models.Post, error) {
 	}
 	return posts, nil
 }
+
+func (r *PostRepository) GetPostsWithCommentsByUserID(userID int) ([]models.PostWithComments, error) {
+	posts, err := r.GetPostsByUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []models.PostWithComments
+	for _, p := range posts {
+		comments, err := r.GetCommentsByPostID(context.Background(), p.ID)
+		if err != nil {
+			comments = []models.Comment{}
+		}
+		result = append(result, models.PostWithComments{
+			ID:        p.ID,
+			UserID:    p.UserID,
+			GroupID:   p.GroupID,
+			Content:   p.Content,
+			ImagePath: p.ImagePath,
+			Privacy:   p.Privacy,
+			CreatedAt: p.CreatedAt,
+			UpdatedAt: p.UpdatedAt,
+			Comments:  comments,
+		})
+	}
+	return result, nil
+}
