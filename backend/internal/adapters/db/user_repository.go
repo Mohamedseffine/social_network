@@ -191,3 +191,20 @@ func (r *UserRepositoryImpl) GetUserByUsername(username string) (*models.User, e
 	return user, nil
 }
 
+func (r *UserRepositoryImpl) GetAllUsers() ([]models.UserProfileDTO, error) {
+    rows, err := r.db.Query(`SELECT id, user_name, first_name, last_name, avatar_path FROM users`)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var users []models.UserProfileDTO
+    for rows.Next() {
+        var dto models.UserProfileDTO
+        if err := rows.Scan(&dto.Id, &dto.UserName, &dto.FirstName, &dto.LastName, &dto.AvatarUrl); err != nil {
+            return nil, err
+        }
+        users = append(users, dto)
+    }
+    return users, nil
+}
