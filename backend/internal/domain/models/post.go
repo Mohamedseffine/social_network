@@ -20,3 +20,15 @@ type Comment struct {
     Content   string    `json:"content"`
     CreatedAt time.Time `json:"created_at"`
 }
+
+type PostWithComments struct {
+    ID        int        `json:"id"`
+    UserID    int        `json:"user_id"`
+    GroupID   *int       `json:"group_id,omitempty"`
+    Content   string     `json:"content"`
+    ImagePath *string    `json:"image_path,omitempty"`
+    Privacy   string     `json:"privacy"`
+    CreatedAt time.Time  `json:"created_at"`
+    UpdatedAt time.Time  `json:"updated_at"`
+    Comments  []Comment  `json:"comments"`
+}
