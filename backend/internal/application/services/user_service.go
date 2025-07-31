@@ -186,3 +186,7 @@ func (s *UserServiceImpl) GetAnotherProfile(viewerID int, profileOwnerUsername s
 
 	return resp, nil
 }
+
+func (s *UserServiceImpl) GetUserIDByUsername(username string) (int, error) {
+	return s.userRepo.GetUserIDByUsername(username)
+}

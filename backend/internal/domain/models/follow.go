@@ -14,3 +14,8 @@ type FollowerInfo struct {
 	UserName   string  `json:"user_name"`
 	Status     string  `json:"status"`
 }
+
+type FollowByUsername struct {
+	FollowingUsername string `json:"following_username"`
+}
+

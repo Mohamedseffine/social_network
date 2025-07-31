@@ -23,15 +23,51 @@ func NewFollowHandler(followSvc service.FollowService, sessionSvc service.Sessio
 	}
 }
 
-func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
+	func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
+			return
+		}
+
+		var payload struct {
+			FollowingID int `json:"following_id"`
+		}
+
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
+			return
+		}
+
+		// Get the current user's ID from the session
+		followerID, err := utils.GetCurrentUserID(r, h.sessionService)
+		if err != nil {
+			utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"error": "Unauthorized"})
+			return
+		}
+
+		follow := &models.Follow{
+			FollowerID:  followerID,
+			FollowingID: payload.FollowingID,
+		}
+
+		if err := h.followService.CreateFollow(follow); err != nil {
+			utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+			return
+		}
+
+		utils.ResponseJSON(w, http.StatusCreated, map[string]any{
+			"success": true,
+			"message": "Follow request created successfully.",
+		})
+	}
+
+func (h *FollowHandler) CreateFollowByUsername(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
 		return
 	}
 
-	var payload struct {
-		FollowingID int `json:"following_id"`
-	}
+	var payload models.FollowByUsername
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid request body"})
@@ -45,12 +81,7 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	follow := &models.Follow{
-		FollowerID:  followerID,
-		FollowingID: payload.FollowingID,
-	}
-
-	if err := h.followService.CreateFollow(follow); err != nil {
+	if err := h.followService.CreateFollowByUsername(&payload, followerID); err != nil {
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
@@ -60,6 +91,7 @@ func (h *FollowHandler) CreateFollow(w http.ResponseWriter, r *http.Request) {
 		"message": "Follow request created successfully.",
 	})
 }
+
 
 func (h *FollowHandler) AcceptFollow(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -200,19 +232,21 @@ func (h *FollowHandler) GetStatusFollow(w http.ResponseWriter, r *http.Request) 
 func (h *FollowHandler) GetFollowers(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GetFollowers called")
 	if r.Method != http.MethodGet {
+		fmt.Println("Method not allowed")
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
 		return
 	}
 
-	userIDStr := r.URL.Query().Get("user_id")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil || userID <= 0 {
-		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid user_id"})
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		fmt.Println("Invalid username")
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid username"})
 		return
 	}
 
-	followers, err := h.followService.GetFollowers(userID)
+	followers, err := h.followService.GetFollowers(username)
 	if err != nil {
+		fmt.Println("Error fetching followers:", err)
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
@@ -226,14 +260,13 @@ func (h *FollowHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userIDStr := r.URL.Query().Get("user_id")
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil || userID <= 0 {
-		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid user_id"})
+	username := r.URL.Query().Get("username")
+	if username == "" {
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid username"})
 		return
 	}
 
-	following, err := h.followService.GetFollowing(userID)
+	following, err := h.followService.GetFollowing(username)
 	if err != nil {
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return

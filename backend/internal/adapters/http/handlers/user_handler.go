@@ -346,3 +346,29 @@ func (h *UserHandler) GetAnotherProfile(w http.ResponseWriter, r *http.Request) 
 
 	utils.ResponseJSON(w, http.StatusOK, resp)
 }
+
+func (h *UserHandler) GetUserIDByUsername(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
+		return
+	}
+
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 4 {
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Username missing in path"})
+		return
+	}
+	username := parts[3]
+	if username == "" {
+		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Username is required"})
+		return
+	}
+
+	id, err := h.userService.GetUserIDByUsername(username)
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+
+	utils.ResponseJSON(w, http.StatusOK, map[string]any{"user_id": id})
+}

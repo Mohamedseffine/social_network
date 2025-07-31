@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 
 	"social_network/internal/domain/models"
 	"social_network/internal/domain/ports/repository"
@@ -191,3 +192,19 @@ func (r *UserRepositoryImpl) GetUserByUsername(username string) (*models.User, e
 	return user, nil
 }
 
+func (r *UserRepositoryImpl) GetUserIDByUsername(username string) (int, error) {
+	query := `
+		SELECT id
+		FROM users
+		WHERE user_name = ?
+	`
+	var id int
+	err := r.db.QueryRow(query, username).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, errors.New("user not found")
+		}
+		return 0, err
+	}
+	return id, nil
+}

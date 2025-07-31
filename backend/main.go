@@ -67,6 +67,7 @@ func main() {
 	r.AddRoute("GET", "/api/search_users", userHandler.SearchUsers)
 	r.AddRoute("GET", "/api/user/by_username", userHandler.GetUserProfileByUsername)
 	r.AddRoute("GET", "/api/profile/another", userHandler.GetAnotherProfile)
+	r.AddRoute("GET", "/api/users/id/", userHandler.GetUserIDByUsername)
 	r.AddPrefixRoute("GET", "/api/users/profile/", userHandler.GetUserProfileByUsername)
 
 	// Follow routes
@@ -77,6 +78,7 @@ func main() {
 	r.AddRoute("GET", "/api/follow/status", followHandler.GetStatusFollow)
 	r.AddRoute("GET", "/api/follow/followers", followHandler.GetFollowers)
 	r.AddRoute("GET", "/api/follow/following", followHandler.GetFollowing)
+	r.AddRoute("POST", "/api/follow/username", followHandler.CreateFollowByUsername)
 
 	// posts routes
 	r.AddRoute("POST", "/api/posts/create_comment", postHandler.CreateComment)
