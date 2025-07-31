@@ -68,10 +68,10 @@ func (s *UserServiceImpl) GetFullProfile(userID int) (*models.FullProfileRespons
 	}
 
 	//get posts user
-	posts, err := s.postRepo.GetPostsByUserID(userID)
-	if err != nil {
-		return nil, err
-	}
+	// posts, err := s.postRepo.GetPostsByUserID(userID)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	userDTO := models.UserProfileDTOFromUser(user)
 
@@ -79,7 +79,7 @@ func (s *UserServiceImpl) GetFullProfile(userID int) (*models.FullProfileRespons
 		User:           userDTO,
 		FollowersCount: len(followers),
 		FollowingCount: len(following),
-		Posts:          posts,
+		// Posts:          posts,
 	}, nil
 }
 
@@ -100,20 +100,21 @@ func (s *UserServiceImpl) GetFullProfileData(viewerID, profileOwnerID int) (*mod
 		return nil, err
 	}
 
-	//get posts user
-	posts, err := s.postRepo.GetPostsByUserID(profileOwnerID)
+	postsWithComments, err := s.postRepo.GetPostsWithCommentsByUserID(profileOwnerID)
 	if err != nil {
 		return nil, err
 	}
+
 	userDTO := models.UserProfileDTOFromUser(user)
 
 	return &models.FullProfileResponse{
 		User:           userDTO,
 		FollowersCount: len(followers),
 		FollowingCount: len(following),
-		Posts:          posts,
+		Posts:          postsWithComments, 
 	}, nil
 }
+
 
 func (s *UserServiceImpl) ChangePrivacyStatus(userID int, privacyStatus string) error {
 	valid := map[string]bool{
