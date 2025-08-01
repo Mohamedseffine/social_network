@@ -97,7 +97,7 @@ func main() {
 	// Chat and messages routes:
 	r.AddRoute("GET", "/api/ws", webSocketHandler.SocketHandler)
 	r.AddRoute("GET", "/api/ws", webSocketHandler.SocketHandler)
-	// r.AddRoute("GET", "/api/chat_users", userHandler.GetChatUsers)
+	r.AddRoute("GET", "/api/chat_users", userHandler.GetChatUsersHandler)
 	r.AddRoute("GET", "/api/messages", messageHandler.GetChatHistoryHandler)
 
 	// Start server
