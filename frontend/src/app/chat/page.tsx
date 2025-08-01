@@ -110,7 +110,6 @@ export default function ChatPage() {
         setNewMessage('')
         scrollToBottom()
     }
-console.log("users: ", users);
 
     return (
         <div style={{ display: 'flex', height: '90vh' }}>
