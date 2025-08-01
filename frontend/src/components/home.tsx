@@ -6,7 +6,6 @@ import CreatePost from './postCreate';
 import PostList from "./postFetch";
 import GroupList from '../components/groups/GroupList';
 // import AllUsers from './user/fetchuser';
-import ChatPage from "./chatPage"
 import { useState } from 'react';
 import styles from './css/HomePage.module.css';
 
@@ -20,7 +19,6 @@ export default function HomePage() {
   const handleLogout = async () => {
     try {
       await logout();
-      router.push('/login');
     } catch (error) {
       console.error('Failed to logout:', error);
     }
@@ -54,7 +52,7 @@ export default function HomePage() {
             </button>
             <button 
               className={`${styles.navItem} ${activeTab === 'chat' ? styles.active : ''}`}
-              onClick={() => setActiveTab('chat')}
+              onClick={() => router.push('/chat')}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
@@ -95,7 +93,7 @@ export default function HomePage() {
             </>
           )}
           {activeTab === 'groups' && <GroupList />}
-          {activeTab === 'chat' && <ChatPage />}
+          {/* {activeTab === 'chat' && <ChatPage />} */}
           {activeTab === 'events' && (
             <div className={styles.comingSoon}>
               <h2>Events Coming Soon!</h2>

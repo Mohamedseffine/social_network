@@ -28,6 +28,7 @@ type MarkAsReadRequest struct {
 }
 
 func (soc *WebSocketHandler) SocketHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("ÀÀÀÀÀÀÀ")
 	if r.Method != "GET" {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"message": "invalid method"})
 		return
