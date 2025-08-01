@@ -170,7 +170,7 @@ func (broker *ChatBroker) RunChatBroker() {
 			broker.Mu.Lock()
 			if _, exists := broker.Clients[client.UserId]; !exists {
 				broker.Clients[client.UserId] = client
-				log.Printf("[INFO] Client %d connected. Total: %d", client.UserId, len(broker.Clients))
+				// log.Printf("[INFO] Client %d connected. Total: %d", client.UserId, len(broker.Clients))
 			}
 			broker.Mu.Unlock()
 
@@ -188,7 +188,7 @@ func (broker *ChatBroker) RunChatBroker() {
 			_, exists := broker.Clients[client.UserId]
 			if exists {
 				delete(broker.Clients, client.UserId)
-				log.Printf("[INFO] Client %d disconnected. Remaining: %d", client.UserId, len(broker.Clients))
+				// log.Printf("[INFO] Client %d disconnected. Remaining: %d", client.UserId, len(broker.Clients))
 			}
 			broker.Mu.Unlock()
 
@@ -233,7 +233,7 @@ func (broker *ChatBroker) DeleteIfClientExist(clientId int) {
 		}
 		client.Pipe <- close
 		delete(broker.Clients, clientId)
-		log.Printf("[INFO] Client %d disconnected. Remaining: %d", clientId, len(broker.Clients))
+		// log.Printf("[INFO] Client %d disconnected. Remaining: %d", clientId, len(broker.Clients))
 	}
 	broker.Mu.Unlock()
 
@@ -344,8 +344,6 @@ func safeClose(ch chan *WebsocketMessage) {
 
 // Create a new websocket connection:
 func (socket *WebSocketService) CreateNewWebSocket(w http.ResponseWriter, r *http.Request) error {
-	fmt.Println("->>--------------------------------------------->>")
-
 	// 1. Method check
 	if r.Method != http.MethodGet {
 		return fmt.Errorf("method not allowed: %s", r.Method)

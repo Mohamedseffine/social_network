@@ -28,7 +28,6 @@ type MarkAsReadRequest struct {
 }
 
 func (soc *WebSocketHandler) SocketHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("ÀÀÀÀÀÀÀ")
 	if r.Method != "GET" {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"message": "invalid method"})
 		return
@@ -49,11 +48,9 @@ func (soc *WebSocketHandler) GetChatUsersHandler(w http.ResponseWriter, r *http.
 	cookie, err := r.Cookie("session_token")
 
 	if err != nil {
-		fmt.Printf("errrrrooooorrrr: %v\n", err)
 		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "No session token found"})
 		return
 	}
-fmt.Printf("\n\nThe offset is %d\n\n ", 666 )
 	userID, err := soc.sessionServ.GetUserIdFromSession(cookie.Value)
 	if err != nil {
 		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "Invalid session"})
@@ -72,6 +69,5 @@ fmt.Printf("\n\nThe offset is %d\n\n ", 666 )
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	fmt.Printf("the number of users is: %d", len(users))
 	utils.ResponseJSON(w, http.StatusOK, users)
 }

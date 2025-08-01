@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"social_network/internal/adapters/http/utils"
 	"social_network/internal/domain/models"
 	"social_network/internal/domain/ports/service"
-	"social_network/internal/adapters/http/utils"
 )
 
 // Create a struct to represent the:
@@ -21,29 +21,29 @@ func NewMessagesHandler(messSer service.MessageService, sessSer service.SessionS
 	return &MessagesHandler{MessageSer: messSer, SessServ: sessSer}
 }
 
-// Get chat history between the client and the chosen user:
 func (messHand *MessagesHandler) GetChatHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-
-	userIDParam := r.URL.Query().Get("user_id")
-	if userIDParam == "" {
-		http.Error(w, "Missing user_id parameter", http.StatusBadRequest)
+// TODO: GET CHAT HISTORY.
+	// Expect guest_id param (from the frontend)
+	guestIDParam := r.URL.Query().Get("guest_id")
+	if guestIDParam == "" {
+		http.Error(w, "Missing guest_id parameter", http.StatusBadRequest)
 		return
 	}
 
-	guestId, err := strconv.Atoi(userIDParam)
+	guestID, err := strconv.Atoi(guestIDParam)
 	if err != nil {
-		http.Error(w, "Invalid user_id format", http.StatusBadRequest)
+		http.Error(w, "Invalid guest_id format", http.StatusBadRequest)
 		return
 	}
 
-	// Handle offset and limit
+	// Parse offset and limit (default safe values if not provided)
 	offset, limit := utils.ParseLimitOffset(r)
 
-	// Session check
+	// Session token from cookie
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		http.Error(w, "Unauthorized: missing session token", http.StatusUnauthorized)
@@ -51,8 +51,8 @@ func (messHand *MessagesHandler) GetChatHistoryHandler(w http.ResponseWriter, r 
 	}
 	sessionToken := cookie.Value
 
-	// Get messages
-	messages, err := messHand.MessageSer.GetChatHistoryService(guestId, sessionToken, offset, limit)
+	// Fetch messages
+	messages, err := messHand.MessageSer.GetChatHistoryService(guestID, sessionToken, offset, limit)
 	if err != nil {
 		if err.Error() == "user has no session" {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -62,11 +62,13 @@ func (messHand *MessagesHandler) GetChatHistoryHandler(w http.ResponseWriter, r 
 		return
 	}
 
-	// Send proper JSON response even when messages are empty
-	w.Header().Set("Content-Type", "application/json")
+	// Return an empty array instead of null
 	if messages == nil {
 		messages = []*models.PrivateMessage{}
 	}
+
+	// Respond with JSON
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(messages)
 }
 
