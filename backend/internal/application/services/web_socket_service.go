@@ -51,9 +51,10 @@ type ChatBroker struct {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return r.Header.Get("Origin") == "http://localhost:8080"
-	},
+CheckOrigin: func(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	return origin == "http://localhost:3000" // <-- adjust as needed
+},
 }
 
 // Instantiate a new chat broker:
@@ -343,6 +344,8 @@ func safeClose(ch chan *WebsocketMessage) {
 
 // Create a new websocket connection:
 func (socket *WebSocketService) CreateNewWebSocket(w http.ResponseWriter, r *http.Request) error {
+	fmt.Println("->>--------------------------------------------->>")
+
 	// 1. Method check
 	if r.Method != http.MethodGet {
 		return fmt.Errorf("method not allowed: %s", r.Method)

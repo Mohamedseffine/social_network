@@ -28,7 +28,6 @@ type MarkAsReadRequest struct {
 }
 
 func (soc *WebSocketHandler) SocketHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("->->-------------------------------------------------------------------------------->>>")
 	if r.Method != "GET" {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"message": "invalid method"})
 		return
@@ -38,6 +37,7 @@ func (soc *WebSocketHandler) SocketHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := soc.socketService.CreateNewWebSocket(w, r); err != nil {
+		fmt.Println(err)
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"message": "failed to create websocket"})
 		return
 	}
