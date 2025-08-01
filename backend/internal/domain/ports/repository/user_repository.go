@@ -13,4 +13,5 @@ type UserRepository interface {
 	GetUserProfileByUsername(username string) (*models.UserProfileDTO, error)
 	GetUserByUsername(username string) (*models.User, error)
 	GetUserIDByUsername(username string) (int, error)
+	GetSortedUsersForChat(myID, offset, limit int) ([]*models.ChatUser, error)
 }

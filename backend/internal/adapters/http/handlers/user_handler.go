@@ -372,9 +372,3 @@ func (h *UserHandler) GetUserIDByUsername(w http.ResponseWriter, r *http.Request
 
 	utils.ResponseJSON(w, http.StatusOK, map[string]any{"user_id": id})
 }
-
-// Get chat users:
-func (user *UserHandler)GetChatUsersHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("....... get users .........")
-	utils.ResponseJSON(w, http.StatusOK, map[string]any{})
-}

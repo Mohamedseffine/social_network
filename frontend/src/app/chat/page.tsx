@@ -4,7 +4,8 @@ import { useEffect, useState, useRef, UIEvent, useCallback } from 'react'
 import axios from 'axios'
 import useSharedSocket from '../hooks/useSharedSocket'
 
-type User = { id: number; name: string }
+type User = { id: number; nick_name: string,  is_online: boolean, unread_count: number}// Create a model to ease working on chat
+
 type Message = { from: number; to: number; content: string; created_at: string }
 
 export default function ChatPage() {
@@ -21,7 +22,9 @@ export default function ChatPage() {
     const offsetRef = useRef(0)
 
     useEffect(() => {
-        axios.get('http://localhost:8080/api/chat_users')
+        axios.get('http://localhost:8080/api/chat_users', {
+            withCredentials: true 
+        })
             .then(res => setUsers(res.data))
             .catch(console.error)
     }, [])
@@ -107,6 +110,7 @@ export default function ChatPage() {
         setNewMessage('')
         scrollToBottom()
     }
+console.log("users: ", users);
 
     return (
         <div style={{ display: 'flex', height: '90vh' }}>
@@ -124,7 +128,7 @@ export default function ChatPage() {
                                 backgroundColor: selectedUser === u.id ? '#ddd' : 'transparent'
                             }}
                         >
-                            {u.name}
+                            {u.nick_name}
                         </div>
                     ))
                 )}
