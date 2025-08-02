@@ -149,7 +149,9 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    token,
-		Expires:  expiresAt,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -372,17 +374,18 @@ func (h *UserHandler) GetUserIDByUsername(w http.ResponseWriter, r *http.Request
 
 	utils.ResponseJSON(w, http.StatusOK, map[string]any{"user_id": id})
 }
+
 func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodGet {
-        utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
-        return
-    }
+	if r.Method != http.MethodGet {
+		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
+		return
+	}
 
-    users, err := h.userService.GetAllUsers()
-    if err != nil {
-        utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-        return
-    }
+	users, err := h.userService.GetAllUsers()
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
 
-    utils.ResponseJSON(w, http.StatusOK, users)
+	utils.ResponseJSON(w, http.StatusOK, users)
 }

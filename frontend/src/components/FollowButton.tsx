@@ -9,27 +9,34 @@ interface FollowButtonProps {
 type FollowStatus = 'none' | 'pending' | 'accepted' | 'declined';
 
 const FollowButton: React.FC<FollowButtonProps> = ({ id }) => {
+  console.log("The following id id: ", id);
+
   const [status, setStatus] = useState<FollowStatus>('none');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchFollowStatus = async () => {
-      try {
-        const res = await axios.get('http://localhost:8080/api/follow/status', {
+useEffect(() => {
+  const fetchFollowStatus = async () => {
+    try {
+      const res = await axios.post(
+        'http://localhost:8080/api/follow/status',
+        null,
+        {
           params: { target_id: id },
           withCredentials: true,
-        });
-        setStatus(res.data.status as FollowStatus);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        }
+      );
 
-    fetchFollowStatus();
-  }, [id]);
+      setStatus(res.data.status as FollowStatus);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchFollowStatus();
+}, [id]);
 
   const handleFollowRequest = async () => {
     setIsLoading(true);
@@ -69,18 +76,18 @@ const FollowButton: React.FC<FollowButtonProps> = ({ id }) => {
     isLoading || status === 'pending' || status === 'accepted';
 
   return (
-<div>
-  {status !== 'accepted' && (
-    <button
-      className={styles.followButton}
-      onClick={handleFollowRequest}
-      disabled={isButtonDisabled()}
-    >
-      {renderButtonText()}
-    </button>
-  )}
-  {error && <p className={styles.error}>{error}</p>}
-</div>
+    <div>
+      {status !== 'accepted' && (
+        <button
+          className={styles.followButton}
+          onClick={handleFollowRequest}
+          disabled={isButtonDisabled()}
+        >
+          {renderButtonText()}
+        </button>
+      )}
+      {error && <p className={styles.error}>{error}</p>}
+    </div>
 
   );
 };

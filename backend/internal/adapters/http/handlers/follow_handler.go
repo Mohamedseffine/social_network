@@ -31,7 +31,7 @@ func NewFollowHandler(followSvc service.FollowService, sessionSvc service.Sessio
 		}
 
 		var payload struct {
-			FollowingID int `json:"following_id"`
+			FollowingID int `json:"target_id"`
 		}
 
 		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
