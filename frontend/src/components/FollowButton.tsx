@@ -1,50 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import styles from './css/FollowButton.module.css';
 
 interface FollowButtonProps {
-  id: number;
+  id: number; // target user ID
 }
 
+type FollowStatus = 'none' | 'pending' | 'accepted' | 'declined';
+
 const FollowButton: React.FC<FollowButtonProps> = ({ id }) => {
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<FollowStatus>('none');
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFollow = async () => {
+  useEffect(() => {
+    const fetchFollowStatus = async () => {
+      try {
+        const res = await axios.get('http://localhost:8080/api/follow/status', {
+          params: { target_id: id },
+          withCredentials: true,
+        });
+        setStatus(res.data.status as FollowStatus);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchFollowStatus();
+  }, [id]);
+
+  const handleFollowRequest = async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8080/api/follow', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ following_id: id }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to follow user');
-      }
-
-      setIsFollowing(true);
-    } catch (error: any) {
-      setError(error.message);
+      await axios.post(
+        'http://localhost:8080/api/follow',
+        { following_id: id },
+        { withCredentials: true }
+      );
+      setStatus('pending');
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const renderButtonText = () => {
+    if (isLoading) return '...';
+    switch (status) {
+      case 'none':
+        return 'Follow';
+      case 'pending':
+        return 'Request Sent';
+      case 'accepted':
+        return 'Following';
+      case 'declined':
+        return 'Declined';
+      default:
+        return 'follow';
+    }
+  };
+
+  const isButtonDisabled = () =>
+    isLoading || status === 'pending' || status === 'accepted';
+
   return (
+<div>
+  {status !== 'accepted' && (
     <button
-      className={`${styles.followButton} ${isFollowing ? styles.following : ''}`}
-      onClick={handleFollow}
-      disabled={isLoading || isFollowing}
+      className={styles.followButton}
+      onClick={handleFollowRequest}
+      disabled={isButtonDisabled()}
     >
-      {isLoading ? 'Following...' : isFollowing ? 'Following' : 'Follow'}
-      {error && <p className={styles.error}>{error}</p>}
+      {renderButtonText()}
     </button>
+  )}
+  {error && <p className={styles.error}>{error}</p>}
+</div>
+
   );
 };
 

@@ -13,3 +13,10 @@ CREATE TABLE IF NOT EXISTS follows (
 CREATE INDEX IF NOT EXISTS idx_follows_follower_id ON follows(follower_id);
 CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_id);
 CREATE INDEX IF NOT EXISTS idx_follows_status ON follows(status);
+
+-- CREATE TRIGGER IF NOT EXISTS update_follows_updated_at
+-- AFTER UPDATE ON follows
+-- FOR EACH ROW
+-- BEGIN
+--     UPDATE follows SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
+-- END;
