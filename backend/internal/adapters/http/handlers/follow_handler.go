@@ -9,17 +9,20 @@ import (
 	"social_network/internal/adapters/http/utils"
 	"social_network/internal/domain/models"
 	"social_network/internal/domain/ports/service"
+	webSocket "social_network/internal/application/services" // alias is fine
 )
 
 type FollowHandler struct {
 	followService  service.FollowService
 	sessionService service.SessionService
+	broker         *webSocket.ChatBroker
 }
 
-func NewFollowHandler(followSvc service.FollowService, sessionSvc service.SessionService) *FollowHandler {
+func NewFollowHandler(followSvc service.FollowService, sessionSvc service.SessionService, hub *webSocket.ChatBroker) *FollowHandler {
 	return &FollowHandler{
 		followService:  followSvc,
 		sessionService: sessionSvc,
+		broker: hub,
 	}
 }
 

@@ -3,7 +3,7 @@ import axios from 'axios';
 import styles from './css/FollowButton.module.css';
 
 interface FollowButtonProps {
-  id: number; // target user ID
+  id: number
 }
 
 type FollowStatus = 'none' | 'pending' | 'accepted' | 'declined';
@@ -46,7 +46,7 @@ useEffect(() => {
     try {
       await axios.post(
         'http://localhost:8080/api/follow',
-        { following_id: id },
+        { target_id: id },
         { withCredentials: true }
       );
       setStatus('pending');
