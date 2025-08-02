@@ -2,6 +2,8 @@ package db
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 
 	"social_network/internal/domain/models"
 	"social_network/internal/domain/ports/repository"
@@ -189,6 +191,103 @@ func (r *UserRepositoryImpl) GetUserByUsername(username string) (*models.User, e
 		return nil, err
 	}
 	return user, nil
+}
+
+func (r *UserRepositoryImpl) GetUserIDByUsername(username string) (int, error) {
+	query := `
+		SELECT id
+		FROM users
+		WHERE user_name = ?
+	`
+	var id int
+	err := r.db.QueryRow(query, username).Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, errors.New("user not found")
+		}
+		return 0, err
+	}
+	return id, nil
+}
+
+// get chat users and groups for the chat:
+
+// Get all users:
+func (userRepo *UserRepositoryImpl) GetSortedUsersForChat(myID, offset, limit int) ([]*models.ChatUser, error) {
+	query := `
+	SELECT id, user_name, unread_count
+	FROM (
+		-- Users who have chatted with me
+		SELECT 
+			u.id, 
+			u.user_name, 
+			MAX(pm.created_at) AS last_message_time,
+			(
+				SELECT COUNT(*) 
+				FROM private_messages 
+				WHERE sender_id = u.id AND receiver_id = ? AND is_read = 0
+			) AS unread_count
+		FROM users u
+		JOIN private_messages pm
+			ON (u.id = pm.sender_id AND pm.receiver_id = ?) 
+			OR (u.id = pm.receiver_id AND pm.sender_id = ?)
+		WHERE u.id != ? AND u.privacy_status = 'public'
+		GROUP BY u.id
+
+		UNION ALL
+
+		-- Users who have NOT chatted with me
+		SELECT 
+			u.id, 
+			u.user_name, 
+			NULL AS last_message_time,
+			0 AS unread_count
+		FROM users u
+		WHERE u.id != ? 
+		  AND u.privacy_status = 'public'
+		  AND u.id NOT IN (
+			SELECT 
+				CASE 
+					WHEN pm.sender_id = ? THEN pm.receiver_id
+					ELSE pm.sender_id
+				END
+			FROM private_messages pm
+			WHERE pm.sender_id = ? OR pm.receiver_id = ?
+		)
+	) AS all_users
+	ORDER BY 
+		last_message_time IS NULL,        -- Put users with no chat history last
+		last_message_time DESC,           -- Recent chats first
+		LOWER(user_name) ASC              -- Alphabetical tie-breaker
+	LIMIT ? OFFSET ?;
+	`
+
+	rows, err := userRepo.db.Query(
+		query,
+		myID, myID, myID, myID, // for the first subquery
+		myID, myID, myID, myID, // for the second subquery
+		limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query error: %v", err)
+	}
+	defer rows.Close()
+
+	var users []*models.ChatUser
+	for rows.Next() {
+		chatUser := &models.ChatUser{}
+		if err := rows.Scan(&chatUser.Id, &chatUser.NickName, &chatUser.UnreadCount); err != nil {
+			return nil, err
+		}
+
+		chatUser.IsOnline = false
+
+		users = append(users, chatUser)
+	}
+for i, v := range users {
+	fmt.Printf("the %dth user is %v\n", i, v)
+}
+	return users, nil
 }
 
 func (r *UserRepositoryImpl) GetAllUsers() ([]models.UserProfileDTO, error) {

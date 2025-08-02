@@ -28,7 +28,6 @@ type MarkAsReadRequest struct {
 }
 
 func (soc *WebSocketHandler) SocketHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("->->-------------------------------------------------------------------------------->>>")
 	if r.Method != "GET" {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"message": "invalid method"})
 		return
@@ -38,33 +37,37 @@ func (soc *WebSocketHandler) SocketHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if err := soc.socketService.CreateNewWebSocket(w, r); err != nil {
+		fmt.Println(err)
 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"message": "failed to create websocket"})
 		return
 	}
 }
 
-// func (soc *WebSocketHandler) GetUsers(w http.ResponseWriter, r *http.Request) {
-// 	cookie, err := r.Cookie("session_token")
-// 	if err != nil {
-// 		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "No session token found"})
-// 		return
-// 	}
+func (soc *WebSocketHandler) GetChatUsersHandler(w http.ResponseWriter, r *http.Request) {
+	
+	cookie, err := r.Cookie("session_token")
 
-// 	userID, err := soc.sessionServ.GetUserIdFromSession(cookie.Value)
-// 	if err != nil {
-// 		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "Invalid session"})
-// 		return
-// 	}
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "No session token found"})
+		return
+	}
+	userID, err := soc.sessionServ.GetUserIdFromSession(cookie.Value)
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusUnauthorized, map[string]any{"message": "Invalid session"})
+		return
+	}
 
-// 	// Extract offset and limit from query parameters, with fallback default values:
+	// Extract offset and limit from query parameters, with fallback default values:
+	
 
-// 	offset, limit := utils.ParseLimitOffset(r)
+	offset, limit := utils.ParseLimitOffset(r)
 
-// 	// Call the service with offset and limit parameters:
-// 	users, err := soc.socketService.GetAllUsersWithStatus(userID, offset, limit)
-// 	if err != nil {
-// 		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-// 		return
-// 	}
-// 	utils.ResponseJSON(w, http.StatusOK, users)
-// }
+
+	// Call the service with offset and limit parameters:
+	users, err := soc.socketService.GetAllUsersWithStatus(userID, offset, limit)
+	if err != nil {
+		utils.ResponseJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	utils.ResponseJSON(w, http.StatusOK, users)
+}

@@ -43,7 +43,7 @@ func main() {
 	postService := services.NewPostService(postRepo)
 	groupsService := services.NewGroupService(groupsRepo)
 	webSocketService := services.NewWebSocketService(chatBroker, messageRepo, sessionRepo, userRepo)
-	// messagesSer := services.NewMessageService(messageRepo, sessionRepo)
+	messagesSer := services.NewMessageService(messageRepo, sessionRepo)
 
 	// Handlers
 	userHandler := handlers.NewUserHandler(userService, sessionService)
@@ -51,6 +51,7 @@ func main() {
 	postHandler := handlers.NewPostHandler(postService, sessionService)
 	groupsHandler := handlers.NewGroupHandler(groupsService, sessionService)
 	webSocketHandler := handlers.NewWebSocketHandler(webSocketService, sessionService)
+	messageHandler := handlers.NewMessagesHandler(messagesSer, sessionService)
 
 	// Router
 	r := router.NewRouter(sessionService)
@@ -67,6 +68,7 @@ func main() {
 	r.AddRoute("GET", "/api/search_users", userHandler.SearchUsers)
 	r.AddRoute("GET", "/api/user/by_username", userHandler.GetUserProfileByUsername)
 	r.AddRoute("GET", "/api/profile/another", userHandler.GetAnotherProfile)
+	r.AddRoute("GET", "/api/users/id/", userHandler.GetUserIDByUsername)
 	r.AddPrefixRoute("GET", "/api/users/profile/", userHandler.GetUserProfileByUsername)
 	r.AddRoute("GET", "/api/users", userHandler.GetAllUsers)
 
@@ -78,6 +80,7 @@ func main() {
 	r.AddRoute("GET", "/api/follow/status", followHandler.GetStatusFollow)
 	r.AddRoute("GET", "/api/follow/followers", followHandler.GetFollowers)
 	r.AddRoute("GET", "/api/follow/following", followHandler.GetFollowing)
+	r.AddRoute("POST", "/api/follow/username", followHandler.CreateFollowByUsername)
 
 	// posts routes
 	r.AddRoute("POST", "/api/posts/create_comment", postHandler.CreateComment)
@@ -92,8 +95,11 @@ func main() {
 	r.AddPrefixRoute("POST", "/api/groups/", groupsHandler.DynamicRoutes)
 	r.AddPrefixRoute("GET", "/api/groups/", groupsHandler.DynamicRoutes)
 
-	// Chat routes:
+	// Chat and messages routes:
 	r.AddRoute("GET", "/api/ws", webSocketHandler.SocketHandler)
+	r.AddRoute("GET", "/api/ws", webSocketHandler.SocketHandler)
+	r.AddRoute("GET", "/api/chat_users", webSocketHandler.GetChatUsersHandler)
+	r.AddRoute("GET", "/api/messages", messageHandler.GetChatHistoryHandler)
 
 	// Start server
 	log.Println("🚀 Server running on http://localhost:8080")

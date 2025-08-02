@@ -51,9 +51,10 @@ type ChatBroker struct {
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return r.Header.Get("Origin") == "http://localhost:8080"
-	},
+CheckOrigin: func(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	return origin == "http://localhost:3000" // <-- adjust as needed
+},
 }
 
 // Instantiate a new chat broker:
@@ -169,7 +170,7 @@ func (broker *ChatBroker) RunChatBroker() {
 			broker.Mu.Lock()
 			if _, exists := broker.Clients[client.UserId]; !exists {
 				broker.Clients[client.UserId] = client
-				log.Printf("[INFO] Client %d connected. Total: %d", client.UserId, len(broker.Clients))
+				// log.Printf("[INFO] Client %d connected. Total: %d", client.UserId, len(broker.Clients))
 			}
 			broker.Mu.Unlock()
 
@@ -187,7 +188,7 @@ func (broker *ChatBroker) RunChatBroker() {
 			_, exists := broker.Clients[client.UserId]
 			if exists {
 				delete(broker.Clients, client.UserId)
-				log.Printf("[INFO] Client %d disconnected. Remaining: %d", client.UserId, len(broker.Clients))
+				// log.Printf("[INFO] Client %d disconnected. Remaining: %d", client.UserId, len(broker.Clients))
 			}
 			broker.Mu.Unlock()
 
@@ -232,7 +233,7 @@ func (broker *ChatBroker) DeleteIfClientExist(clientId int) {
 		}
 		client.Pipe <- close
 		delete(broker.Clients, clientId)
-		log.Printf("[INFO] Client %d disconnected. Remaining: %d", clientId, len(broker.Clients))
+		// log.Printf("[INFO] Client %d disconnected. Remaining: %d", clientId, len(broker.Clients))
 	}
 	broker.Mu.Unlock()
 
@@ -358,7 +359,7 @@ func (socket *WebSocketService) CreateNewWebSocket(w http.ResponseWriter, r *htt
 	// Get user ID from session
 	userId, err := socket.SessionRepo.GetSessionByToken(token)
 	if err != nil {
-		return fmt.Errorf("invalid session: %v", err)
+		//return fmt.Errorf("invalid session: %v", err)
 	}
 
 	// 3. Upgrade the connection only after authentication
@@ -407,27 +408,27 @@ func (socket *WebSocketService) CreateNewWebSocket(w http.ResponseWriter, r *htt
 }
 
 // Get all users and the online status as well:
-// func (socket *WebSocketService) GetAllUsersWithStatus(id, offset, limit int) ([]*models.ChatUser, error) {
-// 	users, err := socket.UserRepo.GetSortedUsersForChat(id, offset, limit)
-// 	if err != nil {
-// 		return nil, err
-// 	}
+func (socket *WebSocketService) GetAllUsersWithStatus(id, offset, limit int) ([]*models.ChatUser, error) {
+	users, err := socket.UserRepo.GetSortedUsersForChat(id, offset, limit)
+	if err != nil {
+		return nil, err
+	}
 
-// 	socket.Hub.Mu.RLock()
-// 	defer socket.Hub.Mu.RUnlock()
+	socket.Hub.Mu.RLock()
+	defer socket.Hub.Mu.RUnlock()
 
-// 	var filteredUsers []*models.ChatUser
-// 	for _, user := range users {
-// 		if user == nil {
-// 			continue
-// 		}
-// 		if user.Id == id {
-// 			continue // skip current user
-// 		}
-// 		_, isOnline := socket.Hub.Clients[user.Id]
-// 		user.IsOnline = isOnline
-// 		filteredUsers = append(filteredUsers, user)
-// 	}
+	var filteredUsers []*models.ChatUser
+	for _, user := range users {
+		if user == nil {
+			continue
+		}
+		if user.Id == id {
+			continue // skip current user
+		}
+		_, isOnline := socket.Hub.Clients[user.Id]
+		user.IsOnline = isOnline
+		filteredUsers = append(filteredUsers, user)
+	}
 
-// 	return filteredUsers, nil
-// }
+	return filteredUsers, nil
+}

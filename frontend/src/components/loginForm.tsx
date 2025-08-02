@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from './AuthContext'
 import axios from 'axios'
 import './component.css/login-form.css' // 👈 Import the CSS
+import { useSocket } from '@/app/context/socketContext'
 
 export default function LoginForm() {
+  const {send} = useSocket()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,6 +31,7 @@ export default function LoginForm() {
         withCredentials: true, // important to send and receive cookies
       });
       login(response.data.user); // Pass user data to login
+      send({type: 'login'})
       router.push('/');
     } catch (err) {
       setError('Login failed: Invalid email or password')

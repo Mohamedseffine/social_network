@@ -12,5 +12,7 @@ type UserService interface {
 	SearchUsers(query string) ([]models.UserProfileDTO, error)
 	GetUserProfileByUsername(username string) (*models.UserProfileDTO, error)
 	GetAnotherProfile(requesterID int, username string) (*models.AnotherProfileResponse, error)
-	GetAllUsers() ([]models.UserProfileDTO, error)
+	GetUserIDByUsername(username string) (int, error)
+	GetAllUsers() ([]models.UserProfileDTO, error) 
+
 }

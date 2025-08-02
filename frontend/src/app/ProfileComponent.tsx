@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import styles from './css/ProfilePage.module.css';
+import { useAuth } from '@/components/AuthContext';
+import FollowButton from '@/components/FollowButton';
 
 type UserProfileDTO = {
   id: number;
@@ -10,74 +12,131 @@ type UserProfileDTO = {
   lastName: string;
   avatarUrl?: string | null;
   email: string;
+  gender?: string;
   aboutMe?: string | null;
-  privacyStatus: string;
-  gender: string;
-  createdAt: string;
+  privacy?: string;
+  joined?: string;
 };
 
-interface Props {
-  username?: string;
-}
+type FollowerUser = {
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+};
 
-export default function ProfilePage({ username }: Props) {
-  const [profile, setProfile] = useState<UserProfileDTO | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function ProfilePage({ username }: { username: string | undefined }) {
+  const { user: authUser } = useAuth();
+  const [user, setUser] = useState<UserProfileDTO | null>(null);
+  const [isOwnProfile, setIsOwnProfile] = useState(false);
+  const [followers, setFollowers] = useState<FollowerUser[]>([]);
+  const [following, setFollowing] = useState<FollowerUser[]>([]);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch(`/api/profile/another?username=${username}`);
+      const data = await res.json();
+      setUser(data);
+    } catch (err) {
+      console.error('Failed to load profile', err);
+    }
+  };
 
   useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const endpoint = username
-          ? `http://localhost:8080/api/users/profile/${username}`
-          : `http://localhost:8080/api/profile`;
-
-        const res = await fetch(endpoint, { credentials: 'include' });
-
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data: UserProfileDTO = await res.json();
-
-        setProfile(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchProfile();
   }, [username]);
 
-  if (loading) return <p>Loading profile...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!profile) return <p>Profile not found.</p>;
+  useEffect(() => {
+    if (authUser && user) {
+      const isMe = authUser.username?.toLowerCase() === user.username?.toLowerCase();
+      setIsOwnProfile(isMe);
+    }
+  }, [authUser, user]);
+
+  const fetchFollowers = async () => {
+    try {
+      const res = await fetch(`/api/follow/followers?username=${user?.username}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFollowers(data);
+      }
+    } catch (err) {
+      console.error('Error fetching followers', err);
+    }
+  };
+
+  const fetchFollowing = async () => {
+    try {
+      const res = await fetch(`/api/follow/following?username=${user?.username}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFollowing(data);
+      }
+    } catch (err) {
+      console.error('Error fetching following', err);
+    }
+  };
+
+  if (!user) return <div>Loading...</div>;
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <div className={styles.avatarBox}>
-          {profile.avatarUrl ? (
-            <img src={`http://localhost:8080/${profile.avatarUrl}`} alt="avatar" className={styles.avatar} />
-          ) : (
-            <div className={styles.avatarPlaceholder}>
-              {profile.firstName[0]}
-              {profile.lastName[0]}
-            </div>
-          )}
+    <div className={styles.profilePage}>
+      <div className={styles.profileHeader}>
+        <div className={styles.avatar}>
+          <span className={styles.initials}>
+            {user.firstName?.[0] ?? ''}{user.lastName?.[0] ?? ''}
+          </span>
         </div>
-        <div className={styles.info}>
-          <h1>{profile.firstName} {profile.lastName}</h1>
-          <h2>@{profile.username}</h2>
-          <p>{profile.aboutMe || 'No bio available.'}</p>
+        <div>
+          <h2>{user.firstName} {user.lastName}</h2>
+          <p>@{user.username}</p>
+          <p>{user.aboutMe ?? "No bio available."}</p>
         </div>
       </div>
 
-      <div className={styles.details}>
-        <div><strong>Email:</strong> {profile.email}</div>
-        <div><strong>Gender:</strong> {profile.gender}</div>
-        <div><strong>Privacy:</strong> {profile.privacyStatus}</div>
-        <div><strong>Joined:</strong> {profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : 'N/A'}</div>
+      <div className={styles.profileDetails}>
+        <p><strong>Email:</strong> {user.email}</p>
+        <p><strong>Gender:</strong> {user.gender ?? "N/A"}</p>
+        <p><strong>Privacy:</strong> {user.privacy ?? "public"}</p>
+        <p><strong>Joined:</strong> {user.joined ?? "N/A"}</p>
       </div>
+
+      <div className={styles["follow-controls"]}>
+        {isOwnProfile ? (
+          <>
+            <button onClick={fetchFollowers}>Show Followers ({followers.length})</button>
+            <button onClick={fetchFollowing}>Show Following ({following.length})</button>
+          </>
+        ) : (
+            <>
+            <button onClick={fetchFollowers}>Show Followers ({followers.length})</button>
+            <button onClick={fetchFollowing}>Show Following ({following.length})</button>
+            <FollowButton id={user.id} />
+          </>
+        )}
+      </div>
+
+      {followers.length > 0 && (
+        <div className={styles.followList}>
+          <h3>Followers</h3>
+          <ul>
+            {followers.map((f) => (
+              <li key={f.id}>{f.firstName} {f.lastName} (@{f.username})</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {following.length > 0 && (
+        <div className={styles.followList}>
+          <h3>Following</h3>
+          <ul>
+            {following.map((f) => (
+              <li key={f.id}>{f.firstName} {f.lastName} (@{f.username})</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

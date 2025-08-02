@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import styles from './css/HomePage.module.css'
+import { useSocket } from '../app/context/socketContext'
 
 interface User {
   id: number
@@ -14,6 +15,7 @@ interface User {
 }
 
 export default function NavBar() {
+  const { send } = useSocket()
   const router = useRouter()
   const { isAuthenticated, loading, logout, user } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
@@ -48,8 +50,10 @@ export default function NavBar() {
   }, [searchQuery])
 
   const handleLogout = async () => {
+    send({type: 'logout'})
     try {
       await logout()
+      
       router.push('/login')
     } catch (error) {
       console.error('Failed to logout:', error)

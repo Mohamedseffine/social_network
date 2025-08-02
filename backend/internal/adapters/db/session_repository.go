@@ -44,6 +44,7 @@ func (sr *SessionRepositoryImpl) GetSessionByToken(token string) (int, error) {
 	var userID int
 	err := sr.db.QueryRow(query, token).Scan(&userID)
 	if err != nil {
+		fmt.Printf("error: %s\n", err)
 		return 0, err
 	}
 	return userID, nil
