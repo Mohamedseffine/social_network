@@ -18,15 +18,15 @@ const FollowButton: React.FC<FollowButtonProps> = ({ id }) => {
 useEffect(() => {
   const fetchFollowStatus = async () => {
     try {
-      const res = await axios.post(
+      const res = await axios.get(
         'http://localhost:8080/api/follow/status',
-        null,
         {
           params: { target_id: id },
           withCredentials: true,
         }
       );
-
+      console.log("following status: ", res.data);
+      
       setStatus(res.data.status as FollowStatus);
     } catch (err: any) {
       setError(err.message);
@@ -37,6 +37,7 @@ useEffect(() => {
 
   fetchFollowStatus();
 }, [id]);
+
 
   const handleFollowRequest = async () => {
     setIsLoading(true);

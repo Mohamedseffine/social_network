@@ -195,15 +195,18 @@ func (h *FollowHandler) DeleteFollow(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FollowHandler) GetStatusFollow(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("ffffffffffffffffffff")
 	if r.Method != http.MethodGet {
 		utils.ResponseJSON(w, http.StatusMethodNotAllowed, map[string]any{"error": "Method not allowed"})
 		return
 	}
 
-	followerIDStr := r.URL.Query().Get("follower_id")
-	followingIDStr := r.URL.Query().Get("following_id")
 
-	followerID, err := strconv.Atoi(followerIDStr)
+
+	followingIDStr := r.URL.Query().Get("target_id")
+
+
+	followerID, err := utils.GetCurrentUserID(r, h.sessionService)
 	if err != nil {
 		utils.ResponseJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid follower_id"})
 		return
@@ -276,3 +279,23 @@ func (h *FollowHandler) GetFollowing(w http.ResponseWriter, r *http.Request) {
 
 	utils.ResponseJSON(w, http.StatusOK, following)
 }
+
+//  Get the following status:
+func (h *FollowHandler) GetFollowingStatus(w http.ResponseWriter, r *http.Request) {
+    targetIDStr := r.URL.Query().Get("target_id")
+    if targetIDStr == "" {
+        http.Error(w, "missing target_id", http.StatusBadRequest)
+        return
+    }
+
+    targetID, err := strconv.Atoi(targetIDStr)
+    if err != nil {
+        http.Error(w, "invalid target_id", http.StatusBadRequest)
+        return
+    }
+
+	fmt.Println("Target id: ", map[string]int{"status": targetID})
+    // Now you can use targetID...
+	utils.ResponseJSON(w, http.StatusOK, map[string]string{"status": "pending"})
+}
+

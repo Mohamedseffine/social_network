@@ -80,6 +80,9 @@ func main() {
 	r.AddRoute("GET", "/api/follow/followers", followHandler.GetFollowers)
 	r.AddRoute("GET", "/api/follow/following", followHandler.GetFollowing)
 	r.AddRoute("POST", "/api/follow/username", followHandler.CreateFollowByUsername)
+	// get the following status
+	r.AddRoute("GET", "/api/follow/status", followHandler.GetStatusFollow)
+
 
 	// posts routes
 	r.AddRoute("POST", "/api/posts/create_comment", postHandler.CreateComment)
