@@ -47,7 +47,7 @@ func main() {
 
 	// Handlers
 	userHandler := handlers.NewUserHandler(userService, sessionService)
-	followHandler := handlers.NewFollowHandler(followService, sessionService)
+	followHandler := handlers.NewFollowHandler(followService, sessionService, chatBroker)
 	postHandler := handlers.NewPostHandler(postService, sessionService)
 	groupsHandler := handlers.NewGroupHandler(groupsService, sessionService)
 	webSocketHandler := handlers.NewWebSocketHandler(webSocketService, sessionService)
