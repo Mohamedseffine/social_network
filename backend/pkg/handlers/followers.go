@@ -113,3 +113,30 @@ func (env *Env) HandleFollowRequestHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Invalid action", http.StatusBadRequest)
 	}
 }
+
+func (env *Env) UnfollowUserHandler(w http.ResponseWriter, r *http.Request) {
+	loggedInUserID, ok := r.Context().Value(UserIDKey).(int64)
+	if !ok {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	vars := mux.Vars(r)
+	unfollowUserIDStr := vars["id"]
+	unfollowUserID, err := strconv.ParseInt(unfollowUserIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	_, err = env.DB.Exec(
+		"DELETE FROM followers WHERE follower_id = ? AND following_id = ?",
+		loggedInUserID, unfollowUserID,
+	)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}

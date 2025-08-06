@@ -35,6 +35,7 @@ func main() {
 	auth.Use(env.AuthMiddleware)
 	auth.HandleFunc("/logout", env.LogoutHandler).Methods("POST")
 	auth.HandleFunc("/users/{id}/follow", env.FollowUserHandler).Methods("POST")
+	auth.HandleFunc("/users/{id}/unfollow", env.UnfollowUserHandler).Methods("POST")
 	auth.HandleFunc("/follow-requests/{id}", env.HandleFollowRequestHandler).Methods("POST")
 
 	log.Println("Server starting on port 8081...")
