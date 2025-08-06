@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"social-network/pkg/models"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -139,4 +140,82 @@ func (env *Env) UnfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+}
+
+func (env *Env) ListFollowersHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userIDStr := vars["id"]
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := env.DB.Query(`
+		SELECT u.id, u.first_name, u.last_name, u.nickname, u.avatar
+		FROM users u
+		INNER JOIN followers f ON u.id = f.follower_id
+		WHERE f.following_id = ? AND f.status = 'accepted'
+	`, userID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var followers []models.PublicUser
+	for rows.Next() {
+		var user models.PublicUser
+		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Nickname, &user.Avatar); err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		followers = append(followers, user)
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(followers)
+}
+
+func (env *Env) ListFollowingHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userIDStr := vars["id"]
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
+
+	rows, err := env.DB.Query(`
+		SELECT u.id, u.first_name, u.last_name, u.nickname, u.avatar
+		FROM users u
+		INNER JOIN followers f ON u.id = f.following_id
+		WHERE f.follower_id = ? AND f.status = 'accepted'
+	`, userID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var following []models.PublicUser
+	for rows.Next() {
+		var user models.PublicUser
+		if err := rows.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Nickname, &user.Avatar); err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+		following = append(following, user)
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(following)
 }

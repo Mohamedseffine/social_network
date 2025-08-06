@@ -29,14 +29,17 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
 	}).Methods("GET")
+	api.HandleFunc("/users/{id}/followers", env.ListFollowersHandler).Methods("GET")
+	api.HandleFunc("/users/{id}/following", env.ListFollowingHandler).Methods("GET")
 
 	// Authenticated routes
 	auth := api.PathPrefix("").Subrouter()
 	auth.Use(env.AuthMiddleware)
 	auth.HandleFunc("/logout", env.LogoutHandler).Methods("POST")
 	auth.HandleFunc("/users/{id}/follow", env.FollowUserHandler).Methods("POST")
-	auth.HandleFunc("/users/{id}/unfollow", env.UnfollowUserHandler).Methods("POST")
 	auth.HandleFunc("/follow-requests/{id}", env.HandleFollowRequestHandler).Methods("POST")
+	auth.HandleFunc("/users/{id}/profile", env.GetProfileHandler).Methods("GET")
+	auth.HandleFunc("/profile", env.UpdateProfileHandler).Methods("PUT")
 
 	log.Println("Server starting on port 8081...")
 	if err := http.ListenAndServe(":8081", r); err != nil {
