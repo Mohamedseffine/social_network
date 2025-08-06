@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
 	"social-network/pkg/db/sqlite"
 	"social-network/pkg/handlers"
 
@@ -24,10 +23,12 @@ func main() {
 
 	r.HandleFunc("/api/register", env.RegisterHandler).Methods("POST")
 	r.HandleFunc("/api/login", env.LoginHandler).Methods("POST")
+	r.HandleFunc("/api/logout", env.LogoutHandler).Methods("POST")
 	r.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
 	}).Methods("GET")
+
 
 	log.Println("Server starting on port 8081...")
 	if err := http.ListenAndServe(":8081", r); err != nil {

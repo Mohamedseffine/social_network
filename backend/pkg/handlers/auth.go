@@ -26,6 +26,40 @@ func generateSessionToken() (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
+func (env *Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			// If the cookie is not set, there is no session to log out of.
+			http.Error(w, "Not logged in", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	sessionToken := cookie.Value
+
+	// Delete the session from the database
+	_, err = env.DB.Exec("DELETE FROM sessions WHERE token = ?", sessionToken)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Expire the cookie on the client
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    "",
+		Expires:  time.Now().Add(-time.Hour), // Set to a past time
+		MaxAge:   -1,                         // This will delete the cookie
+		HttpOnly: true,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Logged out successfully"})
+}
+
 func (env *Env) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
