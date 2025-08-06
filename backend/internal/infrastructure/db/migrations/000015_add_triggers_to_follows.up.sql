@@ -1,6 +1,0 @@
-CREATE TRIGGER IF NOT EXISTS trg_follows_updated_at
-AFTER UPDATE ON follows
-FOR EACH ROW
-BEGIN
-  UPDATE follows SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
-END;
