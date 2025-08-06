@@ -40,6 +40,8 @@ func main() {
 	auth.HandleFunc("/follow-requests/{id}", env.HandleFollowRequestHandler).Methods("POST")
 	auth.HandleFunc("/users/{id}/profile", env.GetProfileHandler).Methods("GET")
 	auth.HandleFunc("/profile", env.UpdateProfileHandler).Methods("PUT")
+	auth.HandleFunc("/posts", env.CreatePostHandler).Methods("POST")
+	auth.HandleFunc("/posts", env.GetPostsHandler).Methods("GET")
 
 	log.Println("Server starting on port 8081...")
 	if err := http.ListenAndServe(":8081", r); err != nil {
