@@ -20,15 +20,22 @@ func main() {
 	env := &handlers.Env{DB: db}
 
 	r := mux.NewRouter()
+	api := r.PathPrefix("/api").Subrouter()
 
-	r.HandleFunc("/api/register", env.RegisterHandler).Methods("POST")
-	r.HandleFunc("/api/login", env.LoginHandler).Methods("POST")
-	r.HandleFunc("/api/logout", env.LogoutHandler).Methods("POST")
-	r.HandleFunc("/api/ping", func(w http.ResponseWriter, r *http.Request) {
+	// Public routes
+	api.HandleFunc("/register", env.RegisterHandler).Methods("POST")
+	api.HandleFunc("/login", env.LoginHandler).Methods("POST")
+	api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
 	}).Methods("GET")
 
+	// Authenticated routes
+	auth := api.PathPrefix("").Subrouter()
+	auth.Use(env.AuthMiddleware)
+	auth.HandleFunc("/logout", env.LogoutHandler).Methods("POST")
+	auth.HandleFunc("/users/{id}/follow", env.FollowUserHandler).Methods("POST")
+	auth.HandleFunc("/follow-requests/{id}", env.HandleFollowRequestHandler).Methods("POST")
 
 	log.Println("Server starting on port 8081...")
 	if err := http.ListenAndServe(":8081", r); err != nil {

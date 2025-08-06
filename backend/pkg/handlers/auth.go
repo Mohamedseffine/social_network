@@ -27,6 +27,7 @@ func generateSessionToken() (string, error) {
 }
 
 func (env *Env) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("LogoutHandler called")
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
