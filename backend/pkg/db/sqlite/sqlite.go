@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -10,37 +11,31 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// InitDB initializes the database connection and runs migrations
-func InitDB(dbPath, migrationsPath string) (*sql.DB, error) {
-	var err error
-	dsn := "file:" + dbPath + "?cache=shared&mode=rwc"
-	db, err := sql.Open("sqlite3", dsn)
+// InitDB initializes the database and runs migrations.
+func InitDB(dbPath string) *sql.DB {
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Failed to open database: %v", err)
 	}
-
-	if err = db.Ping(); err != nil {
-		return nil, err
-	}
-
-	log.Println("Successfully connected to the database")
 
 	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
 	if err != nil {
-		return nil, err
+		log.Fatalf("Failed to create migration driver: %v", err)
 	}
 
 	m, err := migrate.NewWithDatabaseInstance(
-		"file://"+migrationsPath,
-		"sqlite3", driver)
+		"file://./pkg/db/migrations/sqlite",
+		"sqlite3",
+		driver,
+	)
 	if err != nil {
-		return nil, err
+		log.Fatalf("Failed to create migrate instance: %v", err)
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return nil, err
+		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	log.Println("Migrations ran successfully")
-	return db, nil
+	fmt.Println("Database initialized and migrations applied.")
+	return db
 }

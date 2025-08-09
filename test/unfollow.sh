@@ -1,1 +1,0 @@
-curl -i -b cookieA.txt -X POST http://localhost:8081/api/users/2/unfollow

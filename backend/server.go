@@ -1,50 +1,91 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
-	"social-network/pkg/db/sqlite"
-	"social-network/pkg/handlers"
+	"social-network/backend/pkg/db/sqlite"
+	"social-network/backend/pkg/handlers"
+	"social-network/backend/pkg/websockets"
 
 	"github.com/gorilla/mux"
 )
 
 func main() {
-	db, err := sqlite.InitDB("social-network.db", "pkg/db/migrations/sqlite")
-	if err != nil {
-		log.Fatalf("Failed to initialize database: %v", err)
-	}
+	db := sqlite.InitDB("social-network.db")
 	defer db.Close()
 
-	env := &handlers.Env{DB: db}
+	app := &handlers.App{DB: db}
+	hub := websockets.NewHub()
+	go hub.Run()
 
 	r := mux.NewRouter()
-	api := r.PathPrefix("/api").Subrouter()
 
-	// Public routes
-	api.HandleFunc("/register", env.RegisterHandler).Methods("POST")
-	api.HandleFunc("/login", env.LoginHandler).Methods("POST")
-	api.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"message": "pong"})
-	}).Methods("GET")
-	api.HandleFunc("/users/{id}/followers", env.ListFollowersHandler).Methods("GET")
-	api.HandleFunc("/users/{id}/following", env.ListFollowingHandler).Methods("GET")
+	// Use CORS middleware for all routes
+	r.Use(handlers.CORS)
+
+	// Subrouter for API
+	apiRouter := r.PathPrefix("/api").Subrouter()
+
+	// Auth routes
+	apiRouter.HandleFunc("/register", app.RegisterHandler).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/login", app.LoginHandler).Methods("POST", "OPTIONS")
 
 	// Authenticated routes
-	auth := api.PathPrefix("").Subrouter()
-	auth.Use(env.AuthMiddleware)
-	auth.HandleFunc("/logout", env.LogoutHandler).Methods("POST")
-	auth.HandleFunc("/users/{id}/follow", env.FollowUserHandler).Methods("POST")
-	auth.HandleFunc("/follow-requests/{id}", env.HandleFollowRequestHandler).Methods("POST")
-	auth.HandleFunc("/users/{id}/profile", env.GetProfileHandler).Methods("GET")
-	auth.HandleFunc("/profile", env.UpdateProfileHandler).Methods("PUT")
-	auth.HandleFunc("/posts", env.CreatePostHandler).Methods("POST")
-	auth.HandleFunc("/posts", env.GetPostsHandler).Methods("GET")
+	authRouter := apiRouter.PathPrefix("/").Subrouter()
+	authRouter.Use(app.Authenticate)
+	authRouter.HandleFunc("/logout", app.LogoutHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/users/{id}/follow", app.FollowUserHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/users/{id}/unfollow", app.UnfollowUserHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/requests/{id}/accept", app.AcceptFollowRequestHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/requests/{id}/decline", app.DeclineFollowRequestHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/users", app.GetAllUsersHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/users/{id}", app.GetUserHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/users/{id}/followers", app.GetFollowersHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/users/{id}/following", app.GetFollowingHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/users/{id}/posts", app.GetUserPostsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/posts", app.CreatePostHandler).Methods("POST", "OPTIONS")
 
-	log.Println("Server starting on port 8081...")
-	if err := http.ListenAndServe(":8081", r); err != nil {
+	// Group routes
+	authRouter.HandleFunc("/groups", app.CreateGroupHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups", app.GetGroupsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}", app.GetGroupHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}/join", app.JoinGroupHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/requests/{id}/accept", app.AcceptGroupRequestHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}/invite", app.InviteToGroupHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/invites/{id}/accept", app.AcceptGroupInviteHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/invites/{id}/decline", app.DeclineGroupInviteHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}/posts", app.CreateGroupPostHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}/posts", app.GetGroupPostsHandler).Methods("GET", "OPTIONS")
+
+	// Event routes
+	authRouter.HandleFunc("/groups/{id}/events", app.CreateEventHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}/events", app.GetGroupEventsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/events/{id}/respond", app.RespondToEventHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/events/{id}/attendees", app.GetEventAttendeesHandler).Methods("GET", "OPTIONS")
+
+	// Notification routes
+	authRouter.HandleFunc("/notifications", app.GetNotificationsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/notifications/{id}/read", app.MarkNotificationAsReadHandler).Methods("POST", "OPTIONS")
+
+	// WebSocket route
+	authRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		app.ServeWs(hub, w, r)
+	})
+
+	// Image upload route
+	authRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")
+
+	// Profile privacy route
+	authRouter.HandleFunc("/profile/privacy", app.UpdateProfilePrivacyHandler).Methods("POST", "OPTIONS")
+
+	// Session route
+	authRouter.HandleFunc("/session/me", app.GetSessionUserHandler).Methods("GET", "OPTIONS")
+
+	// Serve static files
+	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
+
+	log.Println("Server is listening on port 8080...")
+	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

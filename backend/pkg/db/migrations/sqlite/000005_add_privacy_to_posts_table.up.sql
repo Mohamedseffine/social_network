@@ -1,0 +1,1 @@
+ALTER TABLE posts ADD COLUMN privacy TEXT NOT NULL DEFAULT 'public';

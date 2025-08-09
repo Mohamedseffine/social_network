@@ -1,5 +1,0 @@
-2025/08/06 11:23:03 Successfully connected to the database
-2025/08/06 11:23:03 Migrations ran successfully
-2025/08/06 11:23:03 Server starting on port 8080...
-2025/08/06 11:23:03 Failed to start server: listen tcp :8080: bind: address already in use
-exit status 1

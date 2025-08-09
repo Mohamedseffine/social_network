@@ -2,11 +2,10 @@ package models
 
 import "time"
 
-type Post struct {
+type EventAttendee struct {
 	ID        int64     `json:"id"`
+	EventID   int64     `json:"event_id"`
 	UserID    int64     `json:"user_id"`
-	Content   string    `json:"content"`
-	Image     string    `json:"image,omitempty"`
-	Privacy   string    `json:"privacy"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 }

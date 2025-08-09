@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS users (
     avatar TEXT,
     nickname TEXT,
     about_me TEXT,
-    profile_type TEXT NOT NULL DEFAULT 'private',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    profile_is_public BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
