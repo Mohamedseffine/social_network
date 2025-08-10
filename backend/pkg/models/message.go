@@ -5,6 +5,7 @@ import "time"
 type Message struct {
 	ID         int64     `json:"id"`
 	SenderID   int64     `json:"sender_id"`
+	SenderName string    `json:"sender_name"`
 	ReceiverID *int64    `json:"receiver_id,omitempty"`
 	GroupID    *int64    `json:"group_id,omitempty"`
 	Content    string    `json:"content"`

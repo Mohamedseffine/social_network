@@ -28,10 +28,28 @@ func (app *App) createNotification(userID int64, notifType string, message strin
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(userID, notifType, fullMessage, relatedID)
+	res, err := stmt.Exec(userID, notifType, fullMessage, relatedID)
 	if err != nil {
 		log.Printf("Failed to create notification: %v", err)
+		return
 	}
+
+	// Get the newly created notification to send over WebSocket
+	notifID, err := res.LastInsertId()
+	if err != nil {
+		log.Printf("Failed to get last insert id for notification: %v", err)
+		return
+	}
+
+	var notif models.Notification
+	err = app.DB.QueryRow("SELECT id, user_id, type, message, is_read, related_id, created_at FROM notifications WHERE id = ?", notifID).Scan(&notif.ID, &notif.UserID, &notif.Type, &notif.Message, &notif.IsRead, &notif.RelatedID, &notif.CreatedAt)
+	if err != nil {
+		log.Printf("Failed to get new notification for websocket: %v", err)
+		return
+	}
+
+	// Send notification via WebSocket
+	app.Hub.RouteNotification(&notif)
 }
 
 func (app *App) GetNotificationsHandler(w http.ResponseWriter, r *http.Request) {
@@ -115,4 +133,52 @@ func (app *App) MarkNotificationAsReadHandler(w http.ResponseWriter, r *http.Req
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Notification marked as read"))
+}
+
+func (app *App) DeleteNotificationHandler(w http.ResponseWriter, r *http.Request) {
+	userID := ForContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	notificationIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Notification ID is missing", http.StatusBadRequest)
+		return
+	}
+
+	notificationID, err := strconv.ParseInt(notificationIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid notification ID", http.StatusBadRequest)
+		return
+	}
+
+	stmt, err := app.DB.Prepare("DELETE FROM notifications WHERE id = ? AND user_id = ?")
+	if err != nil {
+		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	res, err := stmt.Exec(notificationID, userID)
+	if err != nil {
+		http.Error(w, "Failed to delete notification", http.StatusInternalServerError)
+		return
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		http.Error(w, "Failed to check rows affected", http.StatusInternalServerError)
+		return
+	}
+
+	if rowsAffected == 0 {
+		http.Error(w, "Notification not found or you are not authorized to delete it", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Notification deleted successfully"))
 }

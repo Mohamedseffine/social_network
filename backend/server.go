@@ -14,9 +14,9 @@ func main() {
 	db := sqlite.InitDB("social-network.db")
 	defer db.Close()
 
-	app := &handlers.App{DB: db}
-	hub := websockets.NewHub()
+	hub := websockets.NewHub(db)
 	go hub.Run()
+	app := &handlers.App{DB: db, Hub: hub}
 
 	r := mux.NewRouter()
 
@@ -49,8 +49,10 @@ func main() {
 	authRouter.HandleFunc("/groups", app.CreateGroupHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups", app.GetGroupsHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/groups/{id}", app.GetGroupHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/groups/{id}/membership", app.GetGroupMembershipStatusHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/groups/{id}/join", app.JoinGroupHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups/requests/{id}/accept", app.AcceptGroupRequestHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/groups/requests/{id}/decline", app.DeclineGroupRequestHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups/{id}/invite", app.InviteToGroupHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups/invites/{id}/accept", app.AcceptGroupInviteHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups/invites/{id}/decline", app.DeclineGroupInviteHandler).Methods("POST", "OPTIONS")
@@ -66,11 +68,17 @@ func main() {
 	// Notification routes
 	authRouter.HandleFunc("/notifications", app.GetNotificationsHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/notifications/{id}/read", app.MarkNotificationAsReadHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/notifications/{id}", app.DeleteNotificationHandler).Methods("DELETE", "OPTIONS")
 
 	// WebSocket route
 	authRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		app.ServeWs(hub, w, r)
 	})
+
+	// Chat routes
+	authRouter.HandleFunc("/conversations", app.GetConversationsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/messages", app.GetMessagesHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/messages/unread-count", app.GetUnreadMessageCountHandler).Methods("GET", "OPTIONS")
 
 	// Image upload route
 	authRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")
@@ -80,6 +88,9 @@ func main() {
 
 	// Session route
 	authRouter.HandleFunc("/session/me", app.GetSessionUserHandler).Methods("GET", "OPTIONS")
+
+	// Feed route
+	authRouter.HandleFunc("/feed", app.GetFeedHandler).Methods("GET", "OPTIONS")
 
 	// Serve static files
 	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))

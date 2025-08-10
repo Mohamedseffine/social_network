@@ -143,6 +143,44 @@ func (app *App) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *App) GetGroupMembershipStatusHandler(w http.ResponseWriter, r *http.Request) {
+	currentUserID := ForContext(r.Context())
+	if currentUserID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	groupIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Group ID is missing", http.StatusBadRequest)
+		return
+	}
+
+	groupID, err := strconv.ParseInt(groupIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid group ID", http.StatusBadRequest)
+		return
+	}
+
+	var status string
+	err = app.DB.QueryRow("SELECT status FROM group_members WHERE group_id = ? AND user_id = ?", groupID, currentUserID).Scan(&status)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			status = "not_member"
+		} else {
+			http.Error(w, "Failed to check membership status", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	response := map[string]string{"status": status}
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
 func (app *App) JoinGroupHandler(w http.ResponseWriter, r *http.Request) {
 	userID := ForContext(r.Context())
 	if userID == 0 {
@@ -282,8 +320,111 @@ func (app *App) AcceptGroupRequestHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Mark the notification as read
+	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'group_join_request' AND related_id = ?", memberID)
+	if err != nil {
+		log.Printf("Failed to mark group join notification as read: %v", err)
+	}
+
+	// Notify the user that their request was accepted
+	var requestingUserID int64
+	var groupName string
+	err = app.DB.QueryRow("SELECT user_id FROM group_members WHERE id = ?", memberID).Scan(&requestingUserID)
+	if err != nil {
+		log.Printf("Failed to get user ID for notification: %v", err)
+	} else {
+		err = app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&groupName)
+		if err != nil {
+			log.Printf("Failed to get group name for notification: %v", err)
+		} else {
+			app.createNotification(requestingUserID, "group_request_accepted", fmt.Sprintf("Your request to join '%s' has been accepted.", groupName), currentUserID, groupID)
+		}
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Join request accepted"))
+}
+
+func (app *App) DeclineGroupRequestHandler(w http.ResponseWriter, r *http.Request) {
+	currentUserID := ForContext(r.Context())
+	if currentUserID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	memberIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Member ID is missing", http.StatusBadRequest)
+		return
+	}
+
+	memberID, err := strconv.ParseInt(memberIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid member ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get the group id from the member id to check for creator
+	var groupID int64
+	err = app.DB.QueryRow("SELECT group_id FROM group_members WHERE id = ?", memberID).Scan(&groupID)
+	if err != nil {
+		http.Error(w, "Failed to get group ID from member ID", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if the current user is the creator of the group
+	var creatorID int64
+	err = app.DB.QueryRow("SELECT creator_id FROM groups WHERE id = ?", groupID).Scan(&creatorID)
+	if err != nil {
+		http.Error(w, "Failed to get group creator ID", http.StatusInternalServerError)
+		return
+	}
+
+	if currentUserID != creatorID {
+		http.Error(w, "Only the group creator can decline requests", http.StatusForbidden)
+		return
+	}
+
+	// Get the user ID who made the request BEFORE deleting the record
+	var requestingUserID int64
+	err = app.DB.QueryRow("SELECT user_id FROM group_members WHERE id = ? AND status = 'pending'", memberID).Scan(&requestingUserID)
+	if err != nil {
+		http.Error(w, "Failed to find pending join request", http.StatusInternalServerError)
+		return
+	}
+
+	// Delete the pending request
+	stmt, err := app.DB.Prepare("DELETE FROM group_members WHERE id = ?")
+	if err != nil {
+		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(memberID)
+	if err != nil {
+		http.Error(w, "Failed to decline join request", http.StatusInternalServerError)
+		return
+	}
+
+	// Mark the notification as read
+	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'group_join_request' AND related_id = ?", memberID)
+	if err != nil {
+		log.Printf("Failed to mark group join notification as read: %v", err)
+	}
+
+	// Notify the user that their request was declined
+	var groupName string
+	err = app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&groupName)
+	if err != nil {
+		log.Printf("Failed to get group name for notification: %v", err)
+	} else {
+		app.createNotification(requestingUserID, "group_request_declined", fmt.Sprintf("Your request to join '%s' has been declined.", groupName), currentUserID, groupID)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Join request declined"))
 }
 
 type InviteToGroupRequest struct {
@@ -446,6 +587,12 @@ func (app *App) AcceptGroupInviteHandler(w http.ResponseWriter, r *http.Request)
 	if rowsAffected == 0 {
 		http.Error(w, "Invitation not found or already accepted", http.StatusNotFound)
 		return
+	}
+
+	// Mark the notification as read
+	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'group_invite' AND related_id = ?", inviteID)
+	if err != nil {
+		log.Printf("Failed to mark group invite notification as read: %v", err)
 	}
 
 	w.WriteHeader(http.StatusOK)

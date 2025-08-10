@@ -4,14 +4,17 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
-	"social-network/backend/pkg/models"
 	"strconv"
+
+	"social-network/backend/pkg/models"
+	"social-network/backend/pkg/websockets"
 
 	"github.com/gorilla/mux"
 )
 
 type App struct {
-	DB *sql.DB
+	DB  *sql.DB
+	Hub *websockets.Hub
 }
 
 func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +70,21 @@ func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
-	rows, err := app.DB.Query("SELECT id, email, first_name, last_name, avatar, nickname FROM users")
+	queryValues := r.URL.Query()
+	searchQuery := queryValues.Get("q")
+
+	var rows *sql.Rows
+	var err error
+
+	baseQuery := "SELECT id, email, first_name, last_name, avatar, nickname FROM users"
+	if searchQuery != "" {
+		// Use LIKE for partial matching. The '%' are wildcards.
+		likeQuery := "%" + searchQuery + "%"
+		rows, err = app.DB.Query(baseQuery+" WHERE first_name LIKE ? OR last_name LIKE ? OR nickname LIKE ?", likeQuery, likeQuery, likeQuery)
+	} else {
+		rows, err = app.DB.Query(baseQuery)
+	}
+
 	if err != nil {
 		http.Error(w, "Failed to get users", http.StatusInternalServerError)
 		return

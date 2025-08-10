@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../utils/api";
 
 const Navbar = () => {
-  const { user, logout, unreadNotifications } = useAuth();
+  const { user, logout, unreadNotifications, unreadMessages } = useAuth();
 
   const handleLogout = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/logout`, {
+      const res = await fetch(`${API_BASE_URL}/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -49,6 +50,9 @@ const Navbar = () => {
               <li className="nav-item">
                 <Link href="/chat" className="nav-links">
                   Chat
+                  {unreadMessages > 0 && (
+                    <span className="notification-badge">{unreadMessages}</span>
+                  )}
                 </Link>
               </li>
               <li className="nav-item">

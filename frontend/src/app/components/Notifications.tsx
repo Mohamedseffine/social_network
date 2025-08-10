@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL } from "../../utils/api";
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -12,7 +13,7 @@ const Notifications = () => {
   const fetchNotificationsData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8080/api/notifications", {
+      const res = await fetch(`${API_BASE_URL}/notifications`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -52,6 +53,25 @@ const Notifications = () => {
     }
   };
 
+  const handleDelete = async (notificationId: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications/${notificationId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setNotifications(notifications.filter(n => n.id !== notificationId));
+        fetchUnreadCount(); // The number of unread might have changed
+      } else {
+        const errorText = await res.text();
+        alert(`Failed to delete notification: ${errorText}`);
+      }
+    } catch (err: any) {
+      alert(`An error occurred: ${err.message}`);
+    }
+  };
+
   const renderActions = (notification: any) => {
     if (notification.is_read) return null;
 
@@ -60,16 +80,16 @@ const Notifications = () => {
 
     switch (notification.type) {
       case "follow_request":
-        acceptUrl = `http://localhost:8080/api/requests/${notification.related_id}/accept`;
-        declineUrl = `http://localhost:8080/api/requests/${notification.related_id}/decline`;
+        acceptUrl = `${API_BASE_URL}/requests/${notification.related_id}/accept`;
+        declineUrl = `${API_BASE_URL}/requests/${notification.related_id}/decline`;
         break;
       case "group_invite":
-        acceptUrl = `http://localhost:8080/api/groups/invites/${notification.related_id}/accept`;
-        declineUrl = `http://localhost:8080/api/groups/invites/${notification.related_id}/decline`;
+        acceptUrl = `${API_BASE_URL}/groups/invites/${notification.related_id}/accept`;
+        declineUrl = `${API_BASE_URL}/groups/invites/${notification.related_id}/decline`;
         break;
       case "group_join_request":
-        acceptUrl = `http://localhost:8080/api/groups/requests/${notification.related_id}/accept`;
-        declineUrl = `http://localhost:8080/api/groups/requests/${notification.related_id}/decline`;
+        acceptUrl = `${API_BASE_URL}/groups/requests/${notification.related_id}/accept`;
+        declineUrl = `${API_BASE_URL}/groups/requests/${notification.related_id}/decline`;
         break;
       default:
         return null;
@@ -103,6 +123,7 @@ const Notifications = () => {
               notification.is_read ? "read" : "unread"
             }`}
           >
+            <button className="delete-notification" onClick={() => handleDelete(notification.id)}>X</button>
             <p>{notification.message}</p>
             {renderActions(notification)}
           </div>

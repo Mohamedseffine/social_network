@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "../../../utils/api";
 
 const GroupPage = ({ params }: { params: { id: string } }) => {
   const [group, setGroup] = useState<any>(null);
+  const [membershipStatus, setMembershipStatus] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -12,83 +14,152 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
   const router = useRouter();
   const { id } = params;
 
-  const fetchGroupData = async () => {
-    setLoading(true);
+  // State for invite user search
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounce search term
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/users?q=${searchTerm}`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data);
+        } else {
+          console.error("Failed to search users");
+        }
+      } catch (err) {
+        console.error("User search error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
+
+  const fetchMemberContent = async () => {
     try {
-      const groupRes = await fetch(`http://localhost:8080/api/groups/${id}`, {
+      const postsRes = await fetch(`${API_BASE_URL}/groups/${id}/posts`, {
         credentials: "include",
       });
-      if (groupRes.ok) {
-        const groupData = await groupRes.json();
-        setGroup(groupData);
-      } else {
-        const errorText = await groupRes.text();
-        setError(`Failed to fetch group data: ${errorText}`);
-      }
+      if (postsRes.ok) setPosts(await postsRes.json());
 
-      const postsRes = await fetch(
-        `http://localhost:8080/api/groups/${id}/posts`,
-        {
-          credentials: "include",
-        }
-      );
-      if (postsRes.ok) {
-        const postsData = await postsRes.json();
-        setPosts(postsData);
-      } else {
-        const errorText = await postsRes.text();
-        setError((prev) => `${prev}\nFailed to fetch group posts: ${errorText}`);
-      }
-
-      const eventsRes = await fetch(
-        `http://localhost:8080/api/groups/${id}/events`,
-        {
-          credentials: "include",
-        }
-      );
-      if (eventsRes.ok) {
-        const eventsData = await eventsRes.json();
-        setEvents(eventsData);
-      } else {
-        const errorText = await eventsRes.text();
-        setError((prev) => `${prev}\nFailed to fetch group events: ${errorText}`);
-      }
-    } catch (err: any) {
-      setError(`An error occurred: ${err.message}`);
-    } finally {
-      setLoading(false);
+      const eventsRes = await fetch(`${API_BASE_URL}/groups/${id}/events`, {
+        credentials: "include",
+      });
+      if (eventsRes.ok) setEvents(await eventsRes.json());
+    } catch (err) {
+      console.error("Failed to fetch member content", err);
+      setError("Failed to load group content.");
     }
   };
 
   useEffect(() => {
-    if (id) {
-      fetchGroupData();
-    }
+    if (!id) return;
+
+    const fetchAllData = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const groupRes = await fetch(`${API_BASE_URL}/groups/${id}`, {
+          credentials: "include",
+        });
+        if (!groupRes.ok) {
+          throw new Error("Failed to fetch group data");
+        }
+        const groupData = await groupRes.json();
+        setGroup(groupData);
+
+        const statusRes = await fetch(`${API_BASE_URL}/groups/${id}/membership`, {
+          credentials: "include",
+        });
+        if (!statusRes.ok) {
+          throw new Error("Failed to fetch membership status");
+        }
+        const statusData = await statusRes.json();
+        setMembershipStatus(statusData.status);
+
+        if (statusData.status === 'accepted') {
+          await fetchMemberContent();
+        }
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
   }, [id]);
+
+  const handleRequestToJoin = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/groups/${id}/join`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        alert("Request to join sent successfully!");
+        setMembershipStatus("pending");
+      } else {
+        const errorText = await res.text();
+        setError(`Failed to send join request: ${errorText}`);
+      }
+    } catch (err: any) {
+      setError(`An error occurred: ${err.message}`);
+    }
+  };
+
+  const handleInviteUser = async (userIdToInvite: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/groups/${id}/invite`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: userIdToInvite }),
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        alert("Invitation sent successfully!");
+        setSearchTerm("");
+        setSearchResults([]);
+      } else {
+        const errorText = await res.text();
+        alert(`Failed to send invitation: ${errorText}`);
+      }
+    } catch (err: any) {
+      alert(`An error occurred: ${err.message}`);
+    }
+  };
 
   const handleCreatePost = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
     const content = formData.get("content");
-
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/groups/${id}/posts`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
-          credentials: "include",
-        }
-      );
-
+      const res = await fetch(`${API_BASE_URL}/groups/${id}/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+        credentials: "include",
+      });
       if (res.ok) {
         form.reset();
-        fetchGroupData(); // Refresh data
+        fetchMemberContent();
       } else {
-        const errorText = await res.text();
-        setError(`Failed to create group post: ${errorText}`);
+        setError(`Failed to create post: ${await res.text()}`);
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
@@ -102,103 +173,119 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
     const title = formData.get("title");
     const description = formData.get("description");
     const event_time = formData.get("event_time");
-
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/groups/${id}/events`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, description, event_time }),
-          credentials: "include",
-        }
-      );
-
+      const res = await fetch(`${API_BASE_URL}/groups/${id}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, description, event_time }),
+        credentials: "include",
+      });
       if (res.ok) {
         form.reset();
-        fetchGroupData(); // Refresh data
+        fetchMemberContent();
       } else {
-        const errorText = await res.text();
-        setError(`Failed to create event: ${errorText}`);
+        setError(`Failed to create event: ${await res.text()}`);
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
     }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  const renderContent = () => {
+    if (membershipStatus === 'accepted') {
+      return (
+        <>
+          <div className="group-actions">
+            <div className="invite-user">
+              <h3>Invite a User</h3>
+              <input
+                type="text"
+                placeholder="Search by name or nickname..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {isSearching && <div>Searching...</div>}
+              <div className="search-results">
+                {searchResults.map((user) => (
+                  <div key={user.id} className="search-result-item">
+                    <span>{user.first_name} {user.last_name} (@{user.nickname})</span>
+                    <button onClick={() => handleInviteUser(user.id)}>Invite</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="group-content">
+            <div className="group-posts">
+              <h2>Posts</h2>
+              <div className="create-group-post">
+                <h3>Create a Post</h3>
+                <form onSubmit={handleCreatePost}>
+                  <textarea name="content" placeholder="What's on your mind?" required />
+                  <button type="submit">Post</button>
+                </form>
+              </div>
+              {posts && posts.length > 0 ? (
+                posts.map((post) => (
+                  <div key={post.id} className="post">
+                    <p>{post.content}</p>
+                    <small>{new Date(post.created_at).toLocaleString()}</small>
+                  </div>
+                ))
+              ) : (
+                <p>No posts in this group yet.</p>
+              )}
+            </div>
+            <div className="group-events">
+              <h2>Events</h2>
+              <div className="create-event">
+                <h3>Create an Event</h3>
+                <form onSubmit={handleCreateEvent}>
+                  <input type="text" name="title" placeholder="Event Title" required />
+                  <textarea name="description" placeholder="Event Description" required />
+                  <input type="datetime-local" name="event_time" required />
+                  <button type="submit">Create Event</button>
+                </form>
+              </div>
+              {events && events.length > 0 ? (
+                events.map((event) => (
+                  <div key={event.id} className="event">
+                    <h3>{event.title}</h3>
+                    <p>{event.description}</p>
+                    <small>When: {new Date(event.event_time).toLocaleString()}</small>
+                  </div>
+                ))
+              ) : (
+                <p>No events in this group yet.</p>
+              )}
+            </div>
+          </div>
+        </>
+      );
+    } else if (membershipStatus === 'pending') {
+      return <div className="group-status-info">Your request to join this group is pending approval.</div>;
+    } else if (membershipStatus === 'not_member') {
+      return (
+        <div className="group-actions">
+          <div className="join-request">
+            <p>You are not a member of this group.</p>
+            <button onClick={handleRequestToJoin}>Request to Join Group</button>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
-  if (error) {
-    return <div className="error">{error}</div>;
-  }
-
-  if (!group) {
-    return <div>No group data found.</div>;
-  }
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div className="error">{error}</div>;
+  if (!group) return <div>Group not found.</div>;
 
   return (
     <div className="group-container">
       <h1>{group.title}</h1>
       <p>{group.description}</p>
-
-      <div className="group-content">
-        <div className="group-posts">
-          <h2>Posts</h2>
-          <div className="create-group-post">
-            <h3>Create a Post</h3>
-            <form onSubmit={handleCreatePost}>
-              <textarea
-                name="content"
-                placeholder="What's on your mind?"
-                required
-              ></textarea>
-              <button type="submit">Post</button>
-            </form>
-          </div>
-          {posts && posts.length > 0 ? (
-            posts.map((post) => (
-              <div key={post.id} className="post">
-                <p>{post.content}</p>
-                <small>{new Date(post.created_at).toLocaleString()}</small>
-              </div>
-            ))
-          ) : (
-            <p>No posts in this group yet.</p>
-          )}
-        </div>
-
-        <div className="group-events">
-          <h2>Events</h2>
-          <div className="create-event">
-            <h3>Create an Event</h3>
-            <form onSubmit={handleCreateEvent}>
-              <input type="text" name="title" placeholder="Event Title" required />
-              <textarea
-                name="description"
-                placeholder="Event Description"
-                required
-              ></textarea>
-              <input type="datetime-local" name="event_time" required />
-              <button type="submit">Create Event</button>
-            </form>
-          </div>
-          {events && events.length > 0 ? (
-            events.map((event) => (
-              <div key={event.id} className="event">
-                <h3>{event.title}</h3>
-                <p>{event.description}</p>
-                <small>
-                  When: {new Date(event.event_time).toLocaleString()}
-                </small>
-              </div>
-            ))
-          ) : (
-            <p>No events in this group yet.</p>
-          )}
-        </div>
-      </div>
+      {renderContent()}
     </div>
   );
 };

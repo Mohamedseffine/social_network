@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { API_BASE_URL } from "../../utils/api";
 
 const GroupsPage = () => {
   const [groups, setGroups] = useState<any[]>([]);
@@ -12,7 +13,7 @@ const GroupsPage = () => {
 
   const fetchGroups = async () => {
     try {
-      const res = await fetch("http://localhost:8080/api/groups", {
+      const res = await fetch(`${API_BASE_URL}/groups`, {
         credentials: "include",
       });
       if (res.ok) {
@@ -41,7 +42,7 @@ const GroupsPage = () => {
     const description = formData.get("description");
 
     try {
-      const res = await fetch(`http://localhost:8080/api/groups`, {
+      const res = await fetch(`${API_BASE_URL}/groups`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, description }),

@@ -191,6 +191,22 @@ func (app *App) AcceptFollowRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Mark the notification as read
+	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'follow_request' AND related_id = ?", requestID)
+	if err != nil {
+		log.Printf("Failed to mark follow request notification as read: %v", err)
+		// Do not fail the request, as the main action succeeded
+	}
+
+	// Notify the user who sent the request that it was accepted
+	var followerID int64
+	err = app.DB.QueryRow("SELECT follower_id FROM followers WHERE id = ?", requestID).Scan(&followerID)
+	if err != nil {
+		log.Printf("Failed to get follower ID to send acceptance notification: %v", err)
+	} else {
+		app.createNotification(followerID, "follow_accepted", "has accepted your follow request.", currentUserID, 0)
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Follow request accepted"))
 }
@@ -237,6 +253,13 @@ func (app *App) DeclineFollowRequestHandler(w http.ResponseWriter, r *http.Reque
 	if rowsAffected == 0 {
 		http.Error(w, "Follow request not found or you are not authorized to decline it", http.StatusNotFound)
 		return
+	}
+
+	// Mark the notification as read
+	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'follow_request' AND related_id = ?", requestID)
+	if err != nil {
+		log.Printf("Failed to mark follow request notification as read: %v", err)
+		// Do not fail the request, as the main action succeeded
 	}
 
 	w.WriteHeader(http.StatusOK)

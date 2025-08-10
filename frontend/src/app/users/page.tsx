@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE_URL, getImageUrl } from "../../utils/api";
 
 const UsersPage = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -15,7 +16,7 @@ const UsersPage = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/users", {
+        const res = await fetch(`${API_BASE_URL}/users`, {
           credentials: "include",
         });
         if (res.ok) {
@@ -70,7 +71,7 @@ const UsersPage = () => {
           return (
             <div key={user.id} className="user-item card">
               <img
-                src={user.avatar ? `http://localhost:8080${user.avatar}` : "/default-avatar.png"}
+                src={getImageUrl(user.avatar)}
                 alt="Avatar"
                 className="user-avatar-small"
               />
