@@ -29,9 +29,15 @@ func (app *App) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 			SELECT p.id, p.user_id, p.content, p.image, p.privacy, p.created_at, u.first_name AS author_first_name, u.last_name AS author_last_name, u.avatar AS author_avatar
 			FROM posts p
 			JOIN users u ON p.user_id = u.id
-			WHERE p.group_id IS NULL AND (
+			WHERE (
+				-- User's own posts
 				p.user_id = ?
-				OR (p.user_id IN (SELECT followed_id FROM followers WHERE follower_id = ? AND status = 'accepted') AND p.privacy IN ('public', 'private'))
+				-- All public posts from all users
+				OR p.privacy = 'public'
+				-- Almost private posts from followed users
+				OR (p.user_id IN (SELECT followed_id FROM followers WHERE follower_id = ? AND status = 'accepted') AND p.privacy = 'almost private')
+				-- Private posts user has access to
+				OR (p.privacy = 'private' AND EXISTS (SELECT 1 FROM post_viewers pv WHERE pv.post_id = p.id AND pv.viewer_id = ?))
 			)
 			UNION ALL
 			-- Group posts from user's groups
@@ -43,7 +49,7 @@ func (app *App) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 		ORDER BY created_at DESC
 		LIMIT ? OFFSET ?
 	`
-	args := []interface{}{currentUserID, currentUserID, currentUserID, limit, offset}
+	args := []interface{}{currentUserID, currentUserID, currentUserID, currentUserID, limit, offset}
 
 	rows, err := app.DB.Query(query, args...)
 	if err != nil {

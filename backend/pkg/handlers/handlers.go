@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"social-network/backend/pkg/models"
 	"strconv"
 
-	"social-network/backend/pkg/models"
 	"social-network/backend/pkg/websockets"
 
 	"github.com/gorilla/mux"

@@ -43,7 +43,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   useEffect(() => {
-    // ... (checkSession implementation unchanged)
+    const checkSession = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/session/me`, { credentials: 'include' });
+        if (res.ok) {
+          const userData = await res.json();
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error("Session check failed", err);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    checkSession();
   }, []);
 
   useEffect(() => {

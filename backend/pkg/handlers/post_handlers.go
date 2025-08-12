@@ -10,9 +10,10 @@ import (
 )
 
 type CreatePostRequest struct {
-	Content string `json:"content"`
-	Image   string `json:"image"`
-	Privacy string `json:"privacy"`
+	Content   string  `json:"content"`
+	Image     string  `json:"image"`
+	Privacy   string  `json:"privacy"`
+	ViewerIDs []int64 `json:"viewer_ids,omitempty"`
 }
 
 func (app *App) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
@@ -28,16 +29,66 @@ func (app *App) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmt, err := app.DB.Prepare("INSERT INTO posts (user_id, content, image, privacy) VALUES (?, ?, ?, ?)")
+	tx, err := app.DB.Begin()
 	if err != nil {
-		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
+		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
+		return
+	}
+	defer tx.Rollback() // Rollback on any error
+
+	// Insert post
+	stmt, err := tx.Prepare("INSERT INTO posts (user_id, content, image, privacy) VALUES (?, ?, ?, ?)")
+	if err != nil {
+		http.Error(w, "Failed to prepare post statement", http.StatusInternalServerError)
 		return
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(userID, req.Content, req.Image, req.Privacy)
+	res, err := stmt.Exec(userID, req.Content, req.Image, req.Privacy)
 	if err != nil {
 		http.Error(w, "Failed to create post", http.StatusInternalServerError)
+		return
+	}
+
+	postID, err := res.LastInsertId()
+	if err != nil {
+		http.Error(w, "Failed to get post ID", http.StatusInternalServerError)
+		return
+	}
+
+	// If post is private, validate viewer IDs and insert into post_viewers
+	if req.Privacy == "private" {
+		// Server-side validation: ensure all viewerIDs are actual followers
+		for _, viewerID := range req.ViewerIDs {
+			isFollower, err := app.isFollowing(viewerID, userID)
+			if err != nil {
+				http.Error(w, "Failed to validate follower status", http.StatusInternalServerError)
+				return
+			}
+			if !isFollower {
+				http.Error(w, "Invalid viewer ID: user is not a follower.", http.StatusBadRequest)
+				return
+			}
+		}
+
+		viewerStmt, err := tx.Prepare("INSERT INTO post_viewers (post_id, viewer_id) VALUES (?, ?)")
+		if err != nil {
+			http.Error(w, "Failed to prepare viewer statement", http.StatusInternalServerError)
+			return
+		}
+		defer viewerStmt.Close()
+
+		for _, viewerID := range req.ViewerIDs {
+			_, err := viewerStmt.Exec(postID, viewerID)
+			if err != nil {
+				http.Error(w, "Failed to add viewer to post", http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
 		return
 	}
 
@@ -68,18 +119,26 @@ func (app *App) GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "SELECT id, user_id, content, image, privacy, created_at FROM posts WHERE user_id = ?"
+	query := `
+		SELECT p.id, p.user_id, p.content, p.image, p.privacy, p.created_at,
+		u.first_name, u.last_name, u.avatar
+		FROM posts p
+		JOIN users u ON p.user_id = u.id
+		WHERE p.user_id = ?`
 	args := []interface{}{profileUserID}
 
 	if !isOwner {
+		privacyClause := " AND (p.privacy = 'public'"
 		if isFollowing {
-			query += " AND privacy IN ('public', 'private')"
-		} else {
-			query += " AND privacy = 'public'"
+			privacyClause += " OR p.privacy = 'almost private'"
 		}
+		// Check for private posts the user has access to
+		privacyClause += " OR (p.privacy = 'private' AND EXISTS (SELECT 1 FROM post_viewers WHERE post_id = p.id AND viewer_id = ?)))"
+		query += privacyClause
+		args = append(args, requestingUserID)
 	}
 
-	query += " ORDER BY created_at DESC"
+	query += " ORDER BY p.created_at DESC"
 
 	rows, err := app.DB.Query(query, args...)
 	if err != nil {
@@ -91,7 +150,7 @@ func (app *App) GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []models.Post
 	for rows.Next() {
 		var post models.Post
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Content, &post.Image, &post.Privacy, &post.CreatedAt); err != nil {
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Content, &post.Image, &post.Privacy, &post.CreatedAt, &post.AuthorFirstName, &post.AuthorLastName, &post.AuthorAvatar); err != nil {
 			http.Error(w, "Failed to scan post", http.StatusInternalServerError)
 			return
 		}

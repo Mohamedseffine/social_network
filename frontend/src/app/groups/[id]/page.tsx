@@ -14,6 +14,9 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
   const router = useRouter();
   const { id } = params;
 
+  // State for create form toggle
+  const [formType, setFormType] = useState('post');
+
   // State for invite user search
   const [searchTerm, setSearchTerm] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -195,6 +198,32 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
     if (membershipStatus === 'accepted') {
       return (
         <>
+          <div className="creation-forms card">
+            <div className="form-toggle">
+              <button onClick={() => setFormType('post')} className={formType === 'post' ? 'active' : ''}>Create Post</button>
+              <button onClick={() => setFormType('event')} className={formType === 'event' ? 'active' : ''}>Create Event</button>
+            </div>
+            {formType === 'post' && (
+              <div className="create-group-post">
+                <h3>Create a Post in {group.title}</h3>
+                <form onSubmit={handleCreatePost}>
+                  <textarea name="content" placeholder="What's on your mind?" required />
+                  <button type="submit">Post</button>
+                </form>
+              </div>
+            )}
+            {formType === 'event' && (
+              <div className="create-event">
+                <h3>Create an Event in {group.title}</h3>
+                <form onSubmit={handleCreateEvent}>
+                  <input type="text" name="title" placeholder="Event Title" required />
+                  <textarea name="description" placeholder="Event Description" required />
+                  <input type="datetime-local" name="event_time" required />
+                  <button type="submit">Create Event</button>
+                </form>
+              </div>
+            )}
+          </div>
           <div className="group-actions">
             <div className="invite-user">
               <h3>Invite a User</h3>
@@ -206,7 +235,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
               />
               {isSearching && <div>Searching...</div>}
               <div className="search-results">
-                {searchResults.map((user) => (
+                {searchResults?.map((user) => (
                   <div key={user.id} className="search-result-item">
                     <span>{user.first_name} {user.last_name} (@{user.nickname})</span>
                     <button onClick={() => handleInviteUser(user.id)}>Invite</button>
@@ -218,13 +247,6 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
           <div className="group-content">
             <div className="group-posts">
               <h2>Posts</h2>
-              <div className="create-group-post">
-                <h3>Create a Post</h3>
-                <form onSubmit={handleCreatePost}>
-                  <textarea name="content" placeholder="What's on your mind?" required />
-                  <button type="submit">Post</button>
-                </form>
-              </div>
               {posts && posts.length > 0 ? (
                 posts.map((post) => (
                   <div key={post.id} className="post">
@@ -238,15 +260,6 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
             </div>
             <div className="group-events">
               <h2>Events</h2>
-              <div className="create-event">
-                <h3>Create an Event</h3>
-                <form onSubmit={handleCreateEvent}>
-                  <input type="text" name="title" placeholder="Event Title" required />
-                  <textarea name="description" placeholder="Event Description" required />
-                  <input type="datetime-local" name="event_time" required />
-                  <button type="submit">Create Event</button>
-                </form>
-              </div>
               {events && events.length > 0 ? (
                 events.map((event) => (
                   <div key={event.id} className="event">

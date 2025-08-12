@@ -9,22 +9,22 @@ const PostCard = ({ post }: { post: any }) => {
   return (
     <div className="post card">
       <div className="post-author">
-        <img src={getImageUrl(post.AuthorAvatar)} alt="Author Avatar" className="user-avatar-small" />
-        <Link href={`/users/${post.UserID}`}>
-          <span>{post.AuthorFirstName} {post.AuthorLastName}</span>
+        <img src={getImageUrl(post.author_avatar)} alt="Author Avatar" className="user-avatar-small" />
+        <Link href={`/users/${post.user_id}`}>
+          <span>{post.author_first_name} {post.author_last_name}</span>
         </Link>
       </div>
-      <p>{post.Content}</p>
-      {post.Image && (
-        <img src={getImageUrl(post.Image)} alt="Post image" className="post-image" />
+      <p>{post.content}</p>
+      {post.image && (
+        <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />
       )}
-      <small>{new Date(post.CreatedAt).toLocaleString()}</small>
+      <small>{new Date(post.created_at).toLocaleString()}</small>
     </div>
   );
 };
 
 export default function Home() {
-  const { user, login } = useAuth();
+  const { user, login, isLoading } = useAuth();
   const [showLogin, setShowLogin] = useState(true);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
@@ -34,6 +34,11 @@ export default function Home() {
   const [page, setPage] = useState(1);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [hasMorePosts, setHasMorePosts] = useState(true);
+
+  // State for Create Post form
+  const [postPrivacy, setPostPrivacy] = useState('public');
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [selectedFollowers, setSelectedFollowers] = useState<number[]>([]);
 
   const showMessage = (msg: string, error: boolean = false) => {
     setMessage(msg);
@@ -72,8 +77,84 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       fetchFeedPosts(true);
+      fetchFollowers();
     }
   }, [user]);
+
+  const fetchFollowers = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/${user.id}/followers`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setFollowers(data || []);
+      } else {
+        console.error("Failed to fetch followers");
+      }
+    } catch (err) {
+      console.error("Error fetching followers", err);
+    }
+  };
+
+  const handleFollowerSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const followerId = parseInt(e.target.value, 10);
+    setSelectedFollowers(prev =>
+      e.target.checked ? [...prev, followerId] : prev.filter(id => id !== followerId)
+    );
+  };
+
+  const handleCreatePost = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const content = formData.get("content");
+    const privacy = formData.get("privacy");
+    const imageFile = formData.get("image") as File;
+
+    let imagePath = "";
+    if (imageFile && imageFile.size > 0) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("image", imageFile);
+        const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+          method: "POST", body: uploadFormData, credentials: "include",
+        });
+        if (uploadRes.ok) {
+          imagePath = (await uploadRes.json()).path;
+        } else {
+          showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
+          return;
+        }
+      } catch (err: any) {
+        showMessage(`Image upload failed: ${err.message}`, true);
+        return;
+      }
+    }
+
+    const postData: any = { content, privacy, image: imagePath };
+    if (postPrivacy === 'private') {
+      postData.viewer_ids = selectedFollowers;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(postData),
+        credentials: "include",
+      });
+      if (res.ok) {
+        form.reset();
+        setPostPrivacy('public');
+        setSelectedFollowers([]);
+        fetchFeedPosts(true); // Refetch feed posts
+      } else {
+        showMessage(`Failed to create post: ${await res.text()}`, true);
+      }
+    } catch (err: any) {
+      showMessage(`An error occurred: ${err.message}`, true);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -143,6 +224,10 @@ export default function Home() {
     }
   };
 
+  if (isLoading) {
+    return <div className="loading-container">Loading...</div>;
+  }
+
   return (
     <main>
       <h1>Social Dilemma</h1>
@@ -150,6 +235,47 @@ export default function Home() {
         {user ? (
           <div id="feed-container">
             <h2>Your Feed</h2>
+            <div className="create-post card">
+              <h3>Create a Post</h3>
+              <form onSubmit={handleCreatePost}>
+                <textarea name="content" placeholder="What's on your mind?" required></textarea>
+                <input type="file" name="image" accept="image/*" />
+                <div className="privacy-options">
+                  <label htmlFor="privacy">Privacy:</label>
+                  <select name="privacy" value={postPrivacy} onChange={(e) => setPostPrivacy(e.target.value)}>
+                    <option value="public">Public</option>
+                    <option value="almost private">Followers Only</option>
+                    <option value="private">Specific Followers</option>
+                  </select>
+                </div>
+
+                {postPrivacy === 'private' && (
+                  <div className="followers-selection">
+                    <h4>Select followers who can see this post:</h4>
+                    <div className="followers-list-container">
+                      {followers.length > 0 ? (
+                        followers.map(follower => (
+                          <div key={follower.id} className="follower-item">
+                            <input
+                              type="checkbox"
+                              id={`follower-${follower.id}`}
+                              value={follower.id}
+                              onChange={handleFollowerSelection}
+                              checked={selectedFollowers.includes(follower.id)}
+                            />
+                            <label htmlFor={`follower-${follower.id}`}>{follower.first_name} {follower.last_name}</label>
+                          </div>
+                        ))
+                      ) : (
+                        <p>You have no followers to select.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <button type="submit">Post</button>
+              </form>
+            </div>
             <div className="posts-list">
                 {posts.map(post => <PostCard key={`${post.privacy}-${post.id}`} post={post} />)}
             </div>
