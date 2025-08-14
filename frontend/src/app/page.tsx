@@ -6,20 +6,108 @@ import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "@/utils/api";
 import OnlineUsersList from "./components/OnlineUsersList";
 
+import { Comment, CommentCard } from "./components/Comment";
+
 const PostCard = ({ post }: { post: any }) => {
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [showComments, setShowComments] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentContent, setCommentContent] = useState("");
+
+  const fetchComments = async () => {
+    if (loadingComments) return;
+    setLoadingComments(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/posts/${post.id}/comments`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch comments", err);
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleToggleComments = () => {
+    const newShowState = !showComments;
+    setShowComments(newShowState);
+    if (newShowState && comments.length === 0) {
+      fetchComments();
+    }
+  };
+
+  const handleCreateComment = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!commentContent.trim()) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/posts/${post.id}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: commentContent }),
+        credentials: "include",
+      });
+
+      if (res.ok) {
+        setCommentContent("");
+        fetchComments(); // Refresh comments
+      } else {
+        console.error("Failed to create comment");
+      }
+    } catch (err) {
+      console.error("An error occurred while creating the comment", err);
+    }
+  };
+
   return (
     <div className="post card">
       <div className="post-author">
-        <img src={getImageUrl(post.AuthorAvatar)} alt="Author Avatar" className="user-avatar-small" />
-        <Link href={`/users/${post.UserID}`}>
-          <span>{post.AuthorFirstName} {post.AuthorLastName}</span>
+        <img src={getImageUrl(post.author_avatar)} alt="Author Avatar" className="user-avatar-small" />
+        <Link href={`/users/${post.user_id}`}>
+          <span>{post.author_first_name} {post.author_last_name}</span>
         </Link>
       </div>
-      <p>{post.Content}</p>
-      {post.Image && (
-        <img src={getImageUrl(post.Image)} alt="Post image" className="post-image" />
+      <p>{post.content}</p>
+      {post.image && (
+        <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />
       )}
-      <small>{new Date(post.CreatedAt).toLocaleString()}</small>
+      <small>{new Date(post.created_at).toLocaleString()}</small>
+      <div className="post-actions">
+        <button onClick={handleToggleComments} className="toggle-comments-btn">
+          {showComments ? "Hide" : "View"} Comments
+        </button>
+      </div>
+
+      {showComments && (
+        <div className="comments-section">
+          <form onSubmit={handleCreateComment} className="comment-form">
+            <textarea
+              value={commentContent}
+              onChange={(e) => setCommentContent(e.target.value)}
+              placeholder="Write a comment..."
+              required
+            />
+            <button type="submit">Comment</button>
+          </form>
+          {loadingComments ? (
+            <p>Loading comments...</p>
+          ) : (
+            <div className="comments-list">
+              {comments.length > 0 ? (
+                comments.map((comment) => (
+                  <CommentCard key={comment.id} comment={comment} />
+                ))
+              ) : (
+                <p>No comments yet.</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -231,7 +319,6 @@ export default function Home() {
 
   return (
     <main>
-      <h1>Social Dilemma</h1>
       <div className="container">
         {user ? (
           <div className="main-content-layout">

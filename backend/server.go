@@ -45,6 +45,9 @@ func main() {
 	authRouter.HandleFunc("/users/{id}/following", app.GetFollowingHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/users/{id}/posts", app.GetUserPostsHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/posts", app.CreatePostHandler).Methods("POST", "OPTIONS")
+	// Comments routes
+	authRouter.HandleFunc("/posts/{id}/comments", app.CreateCommentHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/posts/{id}/comments", app.GetCommentsHandler).Methods("GET", "OPTIONS")
 
 	// Group routes
 	authRouter.HandleFunc("/groups", app.CreateGroupHandler).Methods("POST", "OPTIONS")

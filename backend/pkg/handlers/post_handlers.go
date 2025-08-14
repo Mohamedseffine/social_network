@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"social-network/backend/pkg/models"
@@ -150,9 +151,21 @@ func (app *App) GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []models.Post
 	for rows.Next() {
 		var post models.Post
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Content, &post.Image, &post.Privacy, &post.CreatedAt, &post.AuthorFirstName, &post.AuthorLastName, &post.AuthorAvatar); err != nil {
+		var image, avatar, privacy sql.NullString
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Content, &image, &privacy, &post.CreatedAt, &post.AuthorFirstName, &post.AuthorLastName, &avatar); err != nil {
 			http.Error(w, "Failed to scan post", http.StatusInternalServerError)
 			return
+		}
+		if image.Valid {
+			post.Image = image.String
+		}
+		if avatar.Valid && avatar.String != "" {
+			post.AuthorAvatar = avatar.String
+		} else {
+			post.AuthorAvatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+		}
+		if privacy.Valid {
+			post.Privacy = privacy.String
 		}
 		posts = append(posts, post)
 	}
@@ -165,5 +178,111 @@ func (app *App) GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(posts); err != nil {
 		http.Error(w, "Failed to encode posts", http.StatusInternalServerError)
+	}
+}
+
+func (app *App) CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
+	currentUserID := ForContext(r.Context())
+	if currentUserID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	postIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Post ID is missing", http.StatusBadRequest)
+		return
+	}
+
+	postID, err := strconv.ParseInt(postIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	var payload struct {
+		Content string `json:"content"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if payload.Content == "" {
+		http.Error(w, "Comment content cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	stmt, err := app.DB.Prepare("INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)")
+	if err != nil {
+		http.Error(w, "Failed to prepare comment statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	if _, err := stmt.Exec(postID, currentUserID, payload.Content); err != nil {
+		http.Error(w, "Failed to create comment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Comment created successfully"))
+}
+
+func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	postIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Post ID is missing", http.StatusBadRequest)
+		return
+	}
+
+	postID, err := strconv.ParseInt(postIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	query := `
+		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.first_name, u.last_name, u.avatar
+		FROM comments c
+		JOIN users u ON c.user_id = u.id
+		WHERE c.post_id = ?
+		ORDER BY c.created_at ASC
+	`
+
+	rows, err := app.DB.Query(query, postID)
+	if err != nil {
+		http.Error(w, "Failed to get comments", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var comments []models.Comment
+	for rows.Next() {
+		var comment models.Comment
+		var avatar sql.NullString
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
+			http.Error(w, "Failed to scan comment", http.StatusInternalServerError)
+			return
+		}
+		if avatar.Valid && avatar.String != "" {
+			comment.AuthorAvatar = avatar.String
+		} else {
+			comment.AuthorAvatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+		}
+		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Error iterating over comments", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(comments); err != nil {
+		http.Error(w, "Failed to encode comments", http.StatusInternalServerError)
 	}
 }

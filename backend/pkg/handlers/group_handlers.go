@@ -239,28 +239,13 @@ func (app *App) JoinGroupHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Printf("Failed to get group creator ID for notification: %v", err)
 		} else {
-			notificationStmt, err := app.DB.Prepare("INSERT INTO notifications (user_id, type, message, related_id) VALUES (?, ?, ?, ?)")
+			var group models.Group
+			err := app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
 			if err != nil {
-				log.Printf("Failed to prepare notification statement: %v", err)
+				log.Printf("Failed to get group info for notification: %v", err)
 			} else {
-				defer notificationStmt.Close()
-				var requestingUser models.User
-				err := app.DB.QueryRow("SELECT first_name, last_name FROM users WHERE id = ?", userID).Scan(&requestingUser.FirstName, &requestingUser.LastName)
-				if err != nil {
-					log.Printf("Failed to get requesting user info for notification: %v", err)
-				} else {
-					var group models.Group
-					err := app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
-					if err != nil {
-						log.Printf("Failed to get group info for notification: %v", err)
-					} else {
-						message := fmt.Sprintf("%s %s wants to join your group '%s'.", requestingUser.FirstName, requestingUser.LastName, group.Title)
-						_, err = notificationStmt.Exec(creatorID, "group_join_request", message, joinRequestID)
-						if err != nil {
-							log.Printf("Failed to create notification: %v", err)
-						}
-					}
-				}
+				message := fmt.Sprintf("wants to join your group '%s'.", group.Title)
+				app.createNotification(creatorID, "group_join_request", message, userID, joinRequestID)
 			}
 		}
 	}
@@ -772,9 +757,13 @@ func (app *App) GetGroupPostsHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []models.GroupPost
 	for rows.Next() {
 		var post models.GroupPost
-		if err := rows.Scan(&post.ID, &post.GroupID, &post.UserID, &post.Content, &post.Image, &post.CreatedAt); err != nil {
+		var image sql.NullString
+		if err := rows.Scan(&post.ID, &post.GroupID, &post.UserID, &post.Content, &image, &post.CreatedAt); err != nil {
 			http.Error(w, "Failed to scan group post", http.StatusInternalServerError)
 			return
+		}
+		if image.Valid {
+			post.Image = image.String
 		}
 		posts = append(posts, post)
 	}
@@ -917,9 +906,15 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 	var comments []models.GroupPostComment
 	for rows.Next() {
 		var comment models.GroupPostComment
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.AuthorFirstName, &comment.AuthorLastName, &comment.AuthorAvatar); err != nil {
+		var avatar sql.NullString
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
 			http.Error(w, "Failed to scan comment", http.StatusInternalServerError)
 			return
+		}
+		if avatar.Valid && avatar.String != "" {
+			comment.AuthorAvatar = avatar.String
+		} else {
+			comment.AuthorAvatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
 		}
 		comments = append(comments, comment)
 	}

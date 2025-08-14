@@ -61,13 +61,21 @@ func (app *App) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 	var posts []models.Post
 	for rows.Next() {
 		var post models.Post
-		var privacy sql.NullString
-		if err := rows.Scan(&post.ID, &post.UserID, &post.Content, &post.Image, &privacy, &post.CreatedAt, &post.AuthorFirstName, &post.AuthorLastName, &post.AuthorAvatar); err != nil {
+		var privacy, image, avatar sql.NullString
+		if err := rows.Scan(&post.ID, &post.UserID, &post.Content, &image, &privacy, &post.CreatedAt, &post.AuthorFirstName, &post.AuthorLastName, &avatar); err != nil {
 			http.Error(w, "Failed to scan feed post", http.StatusInternalServerError)
 			return
 		}
 		if privacy.Valid {
 			post.Privacy = privacy.String
+		}
+		if image.Valid {
+			post.Image = image.String
+		}
+		if avatar.Valid && avatar.String != "" {
+			post.AuthorAvatar = avatar.String
+		} else {
+			post.AuthorAvatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
 		}
 		posts = append(posts, post)
 	}

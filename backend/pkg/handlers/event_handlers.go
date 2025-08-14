@@ -93,43 +93,28 @@ func (app *App) CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
+	var eventID int64
+	err = app.DB.QueryRow("SELECT id FROM events WHERE group_id = ? AND creator_id = ? ORDER BY created_at DESC LIMIT 1", groupID, userID).Scan(&eventID)
+	if err != nil {
+		log.Printf("Failed to get event ID for notification: %v", err)
+		return
+	}
+
+	var group models.Group
+	err = app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
+	if err != nil {
+		log.Printf("Failed to get group info for notification: %v", err)
+		return
+	}
+
 	for rows.Next() {
 		var memberID int64
 		if err := rows.Scan(&memberID); err != nil {
 			log.Printf("Failed to scan member ID for notification: %v", err)
 			continue
 		}
-
-		notificationStmt, err := app.DB.Prepare("INSERT INTO notifications (user_id, type, message, related_id) VALUES (?, ?, ?, ?)")
-		if err != nil {
-			log.Printf("Failed to prepare notification statement: %v", err)
-			continue
-		}
-		defer notificationStmt.Close()
-
-		var creator models.User
-		err = app.DB.QueryRow("SELECT first_name, last_name FROM users WHERE id = ?", userID).Scan(&creator.FirstName, &creator.LastName)
-		if err != nil {
-			log.Printf("Failed to get creator info for notification: %v", err)
-		} else {
-			var group models.Group
-			err := app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
-			if err != nil {
-				log.Printf("Failed to get group info for notification: %v", err)
-			} else {
-				var eventID int64
-				err := app.DB.QueryRow("SELECT id FROM events WHERE group_id = ? AND creator_id = ? ORDER BY created_at DESC LIMIT 1", groupID, userID).Scan(&eventID)
-				if err != nil {
-					log.Printf("Failed to get event ID for notification: %v", err)
-				} else {
-					message := fmt.Sprintf("%s %s created a new event in '%s': %s", creator.FirstName, creator.LastName, group.Title, req.Title)
-					_, err = notificationStmt.Exec(memberID, "new_group_event", message, eventID)
-					if err != nil {
-						log.Printf("Failed to create notification: %v", err)
-					}
-				}
-			}
-		}
+		message := fmt.Sprintf("created a new event in '%s': %s", group.Title, req.Title)
+		app.createNotification(memberID, "new_group_event", message, userID, eventID)
 	}
 }
 

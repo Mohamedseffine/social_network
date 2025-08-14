@@ -27,6 +27,10 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Avatar == "" {
+		req.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+	}
+
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
@@ -91,10 +95,22 @@ func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// We need to fetch the full user object to return it
-	err = app.DB.QueryRow("SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_is_public, created_at FROM users WHERE id = ?", user.ID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.ProfileIsPublic, &user.CreatedAt)
+	var avatar, nickname, aboutMe sql.NullString
+	err = app.DB.QueryRow("SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_is_public, created_at FROM users WHERE id = ?", user.ID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &avatar, &nickname, &aboutMe, &user.ProfileIsPublic, &user.CreatedAt)
 	if err != nil {
 		http.Error(w, "Failed to get full user details", http.StatusInternalServerError)
 		return
+	}
+	if avatar.Valid && avatar.String != "" {
+		user.Avatar = avatar.String
+	} else {
+		user.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
+	}
+	if aboutMe.Valid {
+		user.AboutMe = aboutMe.String
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -137,7 +153,8 @@ func (app *App) GetSessionUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user models.User
-	err := app.DB.QueryRow("SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_is_public, created_at FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.ProfileIsPublic, &user.CreatedAt)
+	var avatar, nickname, aboutMe sql.NullString
+	err := app.DB.QueryRow("SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_is_public, created_at FROM users WHERE id = ?", userID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &avatar, &nickname, &aboutMe, &user.ProfileIsPublic, &user.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -145,6 +162,17 @@ func (app *App) GetSessionUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Failed to get user", http.StatusInternalServerError)
 		return
+	}
+	if avatar.Valid && avatar.String != "" {
+		user.Avatar = avatar.String
+	} else {
+		user.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
+	}
+	if aboutMe.Valid {
+		user.AboutMe = aboutMe.String
 	}
 
 	w.Header().Set("Content-Type", "application/json")

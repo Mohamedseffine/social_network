@@ -1,7 +1,7 @@
 # Install dependencies
 FROM node:18-alpine AS deps
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json ./
 # Use npm ci for reproducible builds
 RUN npm ci
 

@@ -34,7 +34,8 @@ func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 	requestingUserID := ForContext(r.Context())
 
 	var user models.User
-	err = app.DB.QueryRow("SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_is_public, created_at FROM users WHERE id = ?", profileUserID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &user.Avatar, &user.Nickname, &user.AboutMe, &user.ProfileIsPublic, &user.CreatedAt)
+	var avatar, nickname, aboutMe sql.NullString
+	err = app.DB.QueryRow("SELECT id, email, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_is_public, created_at FROM users WHERE id = ?", profileUserID).Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.DateOfBirth, &avatar, &nickname, &aboutMe, &user.ProfileIsPublic, &user.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -42,6 +43,17 @@ func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		http.Error(w, "Failed to get user", http.StatusInternalServerError)
 		return
+	}
+	if avatar.Valid && avatar.String != "" {
+		user.Avatar = avatar.String
+	} else {
+		user.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+	}
+	if nickname.Valid {
+		user.Nickname = nickname.String
+	}
+	if aboutMe.Valid {
+		user.AboutMe = aboutMe.String
 	}
 
 	// Get follow status
@@ -103,9 +115,18 @@ func (app *App) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 	var users []models.User
 	for rows.Next() {
 		var user models.User
-		if err := rows.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.Avatar, &user.Nickname); err != nil {
+		var avatar, nickname sql.NullString
+		if err := rows.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &avatar, &nickname); err != nil {
 			http.Error(w, "Failed to scan user", http.StatusInternalServerError)
 			return
+		}
+		if avatar.Valid && avatar.String != "" {
+			user.Avatar = avatar.String
+		} else {
+			user.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+		}
+		if nickname.Valid {
+			user.Nickname = nickname.String
 		}
 		users = append(users, user)
 	}
@@ -152,9 +173,18 @@ func (app *App) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
 	var users []models.User
 	for rows.Next() {
 		var user models.User
-		if err := rows.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.Avatar, &user.Nickname); err != nil {
+		var avatar, nickname sql.NullString
+		if err := rows.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &avatar, &nickname); err != nil {
 			http.Error(w, "Failed to scan user", http.StatusInternalServerError)
 			return
+		}
+		if avatar.Valid && avatar.String != "" {
+			user.Avatar = avatar.String
+		} else {
+			user.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+		}
+		if nickname.Valid {
+			user.Nickname = nickname.String
 		}
 		users = append(users, user)
 	}

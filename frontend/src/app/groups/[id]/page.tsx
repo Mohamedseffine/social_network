@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "../../../utils/api";
+import { Comment, CommentCard } from "../../components/Comment";
 
 const GroupPage = ({ params }: { params: { id: string } }) => {
   const [group, setGroup] = useState<any>(null);
@@ -366,24 +367,28 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
                   <div key={post.id} className="post card">
                     <p>{post.content}</p>
                     <small>{new Date(post.created_at).toLocaleString()}</small>
-                    <div className="comment-section">
-                      <form onSubmit={(e) => handleCreateComment(e, post.id)}>
-                        <input name="content" placeholder="Write a comment..." required />
-                        <button type="submit">Comment</button>
-                      </form>
-                      <button onClick={() => toggleComments(post.id)}>
-                        {visibleComments === post.id ? 'Hide Comments' : 'View Comments'}
+                    <div className="post-actions">
+                      <button onClick={() => toggleComments(post.id)} className="toggle-comments-btn">
+                          {visibleComments === post.id ? 'Hide' : 'View'} Comments
                       </button>
-                      {visibleComments === post.id && (
-                        <div className="comments-list">
-                          {comments[post.id]?.map(comment => (
-                            <div key={comment.id} className="comment">
-                               <span><strong>{comment.author_first_name} {comment.author_last_name}:</strong> {comment.content}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
+                    {visibleComments === post.id && (
+                       <div className="comments-section">
+                         <form onSubmit={(e) => handleCreateComment(e, post.id)} className="comment-form">
+                            <textarea name="content" placeholder="Write a comment..." required />
+                            <button type="submit">Comment</button>
+                         </form>
+                         <div className="comments-list">
+                           {comments[post.id] ? (
+                              comments[post.id].map((comment: Comment) => (
+                                <CommentCard key={comment.id} comment={comment} />
+                              ))
+                           ) : (
+                             <p>Loading comments...</p>
+                           )}
+                         </div>
+                       </div>
+                    )}
                   </div>
                 ))
               ) : (
