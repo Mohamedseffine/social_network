@@ -2,23 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useAuth } from "../context/AuthContext";
-import { API_BASE_URL, getImageUrl } from "../utils/api";
+import { useAuth } from "@/context/AuthContext";
+import { API_BASE_URL, getImageUrl } from "@/utils/api";
+import OnlineUsersList from "./components/OnlineUsersList";
 
 const PostCard = ({ post }: { post: any }) => {
   return (
     <div className="post card">
       <div className="post-author">
-        <img src={getImageUrl(post.author_avatar)} alt="Author Avatar" className="user-avatar-small" />
-        <Link href={`/users/${post.user_id}`}>
-          <span>{post.author_first_name} {post.author_last_name}</span>
+        <img src={getImageUrl(post.AuthorAvatar)} alt="Author Avatar" className="user-avatar-small" />
+        <Link href={`/users/${post.UserID}`}>
+          <span>{post.AuthorFirstName} {post.AuthorLastName}</span>
         </Link>
       </div>
-      <p>{post.content}</p>
-      {post.image && (
-        <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />
+      <p>{post.Content}</p>
+      {post.Image && (
+        <img src={getImageUrl(post.Image)} alt="Post image" className="post-image" />
       )}
-      <small>{new Date(post.created_at).toLocaleString()}</small>
+      <small>{new Date(post.CreatedAt).toLocaleString()}</small>
     </div>
   );
 };
@@ -233,10 +234,10 @@ export default function Home() {
       <h1>Social Dilemma</h1>
       <div className="container">
         {user ? (
-          <div id="feed-container">
-            <h2>Your Feed</h2>
-            <div className="create-post card">
-              <h3>Create a Post</h3>
+          <div className="main-content-layout">
+            <div className="feed-and-posts">
+              <div className="create-post card">
+                <h3>Create a Post</h3>
               <form onSubmit={handleCreatePost}>
                 <textarea name="content" placeholder="What's on your mind?" required></textarea>
                 <input type="file" name="image" accept="image/*" />
@@ -285,6 +286,10 @@ export default function Home() {
             )}
             {!loadingFeed && !hasMorePosts && posts.length === 0 && <p>No posts in your feed yet. Follow some people or join some groups!</p>}
             {!loadingFeed && !hasMorePosts && posts.length > 0 && <p>You've reached the end of the feed.</p>}
+            </div>
+            <div className="sidebar">
+              <OnlineUsersList />
+            </div>
           </div>
         ) : (
           <div className="auth-container">

@@ -44,6 +44,14 @@ func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get follow status
+	followStatus, err := app.getFollowStatus(requestingUserID, profileUserID)
+	if err != nil {
+		http.Error(w, "Failed to get follow status", http.StatusInternalServerError)
+		return
+	}
+	user.FollowStatus = followStatus
+
 	// Privacy check
 	if !user.ProfileIsPublic {
 		isOwner := requestingUserID == profileUserID
@@ -51,11 +59,12 @@ func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
 		if !isOwner && !isFollowing {
 			// Return a limited profile for private users to non-followers
 			limitedUser := models.User{
-				ID:        user.ID,
-				FirstName: user.FirstName,
-				LastName:  user.LastName,
-				Nickname:  user.Nickname,
-				Avatar:    user.Avatar,
+				ID:           user.ID,
+				FirstName:    user.FirstName,
+				LastName:     user.LastName,
+				Nickname:     user.Nickname,
+				Avatar:       user.Avatar,
+				FollowStatus: user.FollowStatus,
 			}
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(limitedUser)
@@ -113,17 +122,78 @@ func (app *App) GetAllUsersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // isFollowing checks if a user is following another user.
-func (app *App) isFollowing(followerID, followedID int64) (bool, error) {
+func (app *App) GetOnlineUsersHandler(w http.ResponseWriter, r *http.Request) {
+	onlineIDs := app.Hub.GetOnlineUserIDs()
+
+	// To return full user objects instead of just IDs
+	if len(onlineIDs) == 0 {
+		json.NewEncoder(w).Encode([]models.User{})
+		return
+	}
+
+	query := "SELECT id, email, first_name, last_name, avatar, nickname FROM users WHERE id IN ("
+	args := make([]interface{}, len(onlineIDs))
+	for i, id := range onlineIDs {
+		if i > 0 {
+			query += ","
+		}
+		query += "?"
+		args[i] = id
+	}
+	query += ")"
+
+	rows, err := app.DB.Query(query, args...)
+	if err != nil {
+		http.Error(w, "Failed to get online users", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var user models.User
+		if err := rows.Scan(&user.ID, &user.Email, &user.FirstName, &user.LastName, &user.Avatar, &user.Nickname); err != nil {
+			http.Error(w, "Failed to scan user", http.StatusInternalServerError)
+			return
+		}
+		users = append(users, user)
+	}
+
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Error iterating over users", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(users); err != nil {
+		http.Error(w, "Failed to encode users", http.StatusInternalServerError)
+	}
+}
+
+// getFollowStatus checks the follow status between two users.
+func (app *App) getFollowStatus(followerID, followedID int64) (string, error) {
+	if followerID == followedID {
+		return "is_self", nil
+	}
 	if followerID == 0 {
-		return false, nil
+		// Not logged in, so can't be following.
+		return "not_following", nil
 	}
 
 	var status string
 	err := app.DB.QueryRow("SELECT status FROM followers WHERE follower_id = ? AND followed_id = ?", followerID, followedID).Scan(&status)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return false, nil
+			return "not_following", nil
 		}
+		return "", err
+	}
+	return status, nil
+}
+
+func (app *App) isFollowing(followerID, followedID int64) (bool, error) {
+	status, err := app.getFollowStatus(followerID, followedID)
+	if err != nil {
 		return false, err
 	}
 	return status == "accepted", nil

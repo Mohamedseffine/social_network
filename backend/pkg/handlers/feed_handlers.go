@@ -23,10 +23,10 @@ func (app *App) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `
-		SELECT id, user_id, content, image, privacy, created_at, author_first_name, author_last_name, author_avatar
+		SELECT id, user_id, content, image, privacy, created_at, first_name, last_name, avatar
 		FROM (
 			-- Regular posts from followed users and self
-			SELECT p.id, p.user_id, p.content, p.image, p.privacy, p.created_at, u.first_name AS author_first_name, u.last_name AS author_last_name, u.avatar AS author_avatar
+			SELECT p.id, p.user_id, p.content, p.image, p.privacy, p.created_at, u.first_name, u.last_name, u.avatar
 			FROM posts p
 			JOIN users u ON p.user_id = u.id
 			WHERE (
@@ -41,7 +41,7 @@ func (app *App) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 			)
 			UNION ALL
 			-- Group posts from user's groups
-			SELECT gp.id, gp.user_id, gp.content, gp.image, 'group' as privacy, gp.created_at, u.first_name AS author_first_name, u.last_name AS author_last_name, u.avatar AS author_avatar
+			SELECT gp.id, gp.user_id, gp.content, gp.image, 'group' as privacy, gp.created_at, u.first_name, u.last_name, u.avatar
 			FROM group_posts gp
 			JOIN users u ON gp.user_id = u.id
 			WHERE gp.group_id IN (SELECT group_id FROM group_members WHERE user_id = ? AND status = 'accepted')

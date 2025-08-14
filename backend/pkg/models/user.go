@@ -14,4 +14,5 @@ type User struct {
 	AboutMe         string    `json:"about_me,omitempty"`
 	ProfileIsPublic bool      `json:"profile_is_public"`
 	CreatedAt       time.Time `json:"created_at"`
+	FollowStatus    string    `json:"follow_status,omitempty"`
 }

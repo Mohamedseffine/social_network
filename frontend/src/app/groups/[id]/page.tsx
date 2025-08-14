@@ -68,6 +68,112 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
     }
   };
 
+  const [comments, setComments] = useState<{ [key: number]: any[] }>({});
+  const [visibleComments, setVisibleComments] = useState<number | null>(null);
+
+  const handleCreateComment = async (e: React.FormEvent<HTMLFormElement>, postId: number) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const content = formData.get("content") as string;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/group-posts/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        form.reset();
+        fetchComments(postId); // Refetch comments to show the new one
+      } else {
+        setError(`Failed to create comment: ${await res.text()}`);
+      }
+    } catch (err: any) {
+      setError(`An error occurred: ${err.message}`);
+    }
+  };
+
+  const fetchComments = async (postId: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/group-posts/${postId}/comments`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setComments(prev => ({ ...prev, [postId]: data || [] }));
+      } else {
+        console.error("Failed to fetch comments");
+      }
+    } catch (err) {
+      console.error("Error fetching comments", err);
+    }
+  };
+
+  const toggleComments = (postId: number) => {
+    if (visibleComments === postId) {
+      setVisibleComments(null); // Hide if already visible
+    } else {
+      setVisibleComments(postId);
+      if (!comments[postId]) { // Fetch only if not already fetched
+        fetchComments(postId);
+      }
+    }
+  };
+
+  const [attendees, setAttendees] = useState<{ [key: number]: any[] }>({});
+  const [visibleAttendees, setVisibleAttendees] = useState<number | null>(null);
+
+  const handleRsvp = async (eventId: number, status: 'going' | 'not_going') => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/respond`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+        credentials: "include",
+      });
+      if (res.ok) {
+        alert(`You are now marked as ${status}`);
+        // If attendees for this event are visible, refetch them
+        if (visibleAttendees === eventId) {
+          fetchAttendees(eventId);
+        }
+      } else {
+        setError(`Failed to RSVP: ${await res.text()}`);
+      }
+    } catch (err: any) {
+      setError(`An error occurred: ${err.message}`);
+    }
+  };
+
+  const fetchAttendees = async (eventId: number) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/events/${eventId}/attendees`, {
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setAttendees(prev => ({ ...prev, [eventId]: data || [] }));
+      } else {
+        console.error("Failed to fetch attendees");
+      }
+    } catch (err) {
+      console.error("Error fetching attendees", err);
+    }
+  };
+
+  const toggleAttendees = (eventId: number) => {
+    if (visibleAttendees === eventId) {
+      setVisibleAttendees(null); // Hide if already visible
+    } else {
+      setVisibleAttendees(eventId);
+      if (!attendees[eventId]) { // Fetch only if not already fetched
+        fetchAttendees(eventId);
+      }
+    }
+  };
+
   useEffect(() => {
     if (!id) return;
 
@@ -175,7 +281,15 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
     const formData = new FormData(form);
     const title = formData.get("title");
     const description = formData.get("description");
-    const event_time = formData.get("event_time");
+    const event_time_str = formData.get("event_time") as string;
+
+    if (!event_time_str) {
+      setError("Event time is required.");
+      return;
+    }
+
+    const event_time = new Date(event_time_str).toISOString();
+
     try {
       const res = await fetch(`${API_BASE_URL}/groups/${id}/events`, {
         method: "POST",
@@ -249,9 +363,27 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
               <h2>Posts</h2>
               {posts && posts.length > 0 ? (
                 posts.map((post) => (
-                  <div key={post.id} className="post">
+                  <div key={post.id} className="post card">
                     <p>{post.content}</p>
                     <small>{new Date(post.created_at).toLocaleString()}</small>
+                    <div className="comment-section">
+                      <form onSubmit={(e) => handleCreateComment(e, post.id)}>
+                        <input name="content" placeholder="Write a comment..." required />
+                        <button type="submit">Comment</button>
+                      </form>
+                      <button onClick={() => toggleComments(post.id)}>
+                        {visibleComments === post.id ? 'Hide Comments' : 'View Comments'}
+                      </button>
+                      {visibleComments === post.id && (
+                        <div className="comments-list">
+                          {comments[post.id]?.map(comment => (
+                            <div key={comment.id} className="comment">
+                               <span><strong>{comment.author_first_name} {comment.author_last_name}:</strong> {comment.content}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))
               ) : (
@@ -262,10 +394,29 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
               <h2>Events</h2>
               {events && events.length > 0 ? (
                 events.map((event) => (
-                  <div key={event.id} className="event">
+                  <div key={event.id} className="event card">
                     <h3>{event.title}</h3>
                     <p>{event.description}</p>
                     <small>When: {new Date(event.event_time).toLocaleString()}</small>
+                    <div className="event-actions">
+                      <button onClick={() => handleRsvp(event.id, 'going')}>Going</button>
+                      <button onClick={() => handleRsvp(event.id, 'not_going')}>Not Going</button>
+                      <button onClick={() => toggleAttendees(event.id)}>
+                        {visibleAttendees === event.id ? 'Hide RSVPs' : 'View RSVPs'}
+                      </button>
+                    </div>
+                    {visibleAttendees === event.id && (
+                      <div className="attendees-list">
+                        <h4>Going:</h4>
+                        <ul>
+                          {attendees[event.id]?.filter(a => a.status === 'going').map(a => <li key={a.id}>{a.first_name} {a.last_name}</li>)}
+                        </ul>
+                        <h4>Not Going:</h4>
+                        <ul>
+                          {attendees[event.id]?.filter(a => a.status === 'not_going').map(a => <li key={a.id}>{a.first_name} {a.last_name}</li>)}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (

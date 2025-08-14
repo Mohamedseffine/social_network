@@ -13,6 +13,8 @@ interface AuthContextType {
   unreadMessages: number;
   ws: React.RefObject<WebSocket | null>;
   lastChatMessage: any | null;
+  onlineUsers: any[];
+  fetchUnreadMessageCount: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,10 +25,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [lastChatMessage, setLastChatMessage] = useState<any | null>(null);
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const ws = useRef<WebSocket | null>(null);
 
   const fetchNotifications = useCallback(async () => {
-    // ... (implementation unchanged)
+    if (!user) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/notifications/unread-count`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Unread notifications count:", data.unread_count);
+        setUnreadNotifications(data.unread_count);
+      }
+    } catch (err) {
+      console.error("Failed to fetch unread notifications", err);
+    }
   }, [user]);
 
   const fetchUnreadMessageCount = useCallback(async () => {
@@ -62,12 +75,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
+  const fetchOnlineUsers = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/users/online`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setOnlineUsers(data || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch online users", err);
+    }
+  }, []);
+
   useEffect(() => {
     if (user && !ws.current) {
+      fetchOnlineUsers(); // Fetch initial list
       const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
       ws.current = new WebSocket(wsUrl);
       ws.current.onopen = () => console.log("Global WebSocket connected");
-      ws.current.onclose = () => console.log("Global WebSocket disconnected");
+      ws.current.onclose = () => {
+        console.log("Global WebSocket disconnected");
+        setOnlineUsers([]); // Clear online users on disconnect
+      };
       ws.current.onerror = (error) => console.error("Global WebSocket error:", error);
 
       ws.current.onmessage = (event) => {
@@ -78,6 +107,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else if (message.type === 'chat_message') {
            setLastChatMessage(message.payload);
            fetchUnreadMessageCount();
+        } else if (message.type === 'online_users') {
+          setOnlineUsers(message.payload);
         }
       };
 
@@ -106,7 +137,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, unreadNotifications, fetchNotifications, unreadMessages, ws, lastChatMessage }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, unreadNotifications, fetchNotifications, unreadMessages, fetchUnreadMessageCount, ws, lastChatMessage, onlineUsers }}>
       {children}
     </AuthContext.Provider>
   );

@@ -789,3 +789,148 @@ func (app *App) GetGroupPostsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to encode group posts", http.StatusInternalServerError)
 	}
 }
+
+type CreateGroupPostCommentRequest struct {
+	Content string `json:"content"`
+}
+
+func (app *App) CreateGroupPostCommentHandler(w http.ResponseWriter, r *http.Request) {
+	userID := ForContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	postIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Post ID is missing", http.StatusBadRequest)
+		return
+	}
+	postID, err := strconv.ParseInt(postIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get group_id from post_id to check membership
+	var groupID int64
+	err = app.DB.QueryRow("SELECT group_id FROM group_posts WHERE id = ?", postID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Group post not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to get group ID from post", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if the user is a member of the group
+	var status string
+	err = app.DB.QueryRow("SELECT status FROM group_members WHERE group_id = ? AND user_id = ?", groupID, userID).Scan(&status)
+	if err != nil || status != "accepted" {
+		http.Error(w, "Only accepted members of the group can comment", http.StatusForbidden)
+		return
+	}
+
+	var req CreateGroupPostCommentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.Content == "" {
+		http.Error(w, "Comment content cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	stmt, err := app.DB.Prepare("INSERT INTO group_post_comments (post_id, user_id, content) VALUES (?, ?, ?)")
+	if err != nil {
+		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(postID, userID, req.Content)
+	if err != nil {
+		http.Error(w, "Failed to create comment", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte("Comment created successfully"))
+}
+
+func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Request) {
+	userID := ForContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	vars := mux.Vars(r)
+	postIDStr, ok := vars["id"]
+	if !ok {
+		http.Error(w, "Post ID is missing", http.StatusBadRequest)
+		return
+	}
+	postID, err := strconv.ParseInt(postIDStr, 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid post ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get group_id from post_id to check membership
+	var groupID int64
+	err = app.DB.QueryRow("SELECT group_id FROM group_posts WHERE id = ?", postID).Scan(&groupID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "Group post not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to get group ID from post", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if the user is a member of the group
+	var status string
+	err = app.DB.QueryRow("SELECT status FROM group_members WHERE group_id = ? AND user_id = ?", groupID, userID).Scan(&status)
+	if err != nil || status != "accepted" {
+		http.Error(w, "Only accepted members of the group can view comments", http.StatusForbidden)
+		return
+	}
+
+	query := `
+		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.first_name, u.last_name, u.avatar
+		FROM group_post_comments c
+		JOIN users u ON c.user_id = u.id
+		WHERE c.post_id = ?
+		ORDER BY c.created_at ASC
+	`
+	rows, err := app.DB.Query(query, postID)
+	if err != nil {
+		http.Error(w, "Failed to get comments", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var comments []models.GroupPostComment
+	for rows.Next() {
+		var comment models.GroupPostComment
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.AuthorFirstName, &comment.AuthorLastName, &comment.AuthorAvatar); err != nil {
+			http.Error(w, "Failed to scan comment", http.StatusInternalServerError)
+			return
+		}
+		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		http.Error(w, "Error iterating over comments", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(comments); err != nil {
+		http.Error(w, "Failed to encode comments", http.StatusInternalServerError)
+	}
+}

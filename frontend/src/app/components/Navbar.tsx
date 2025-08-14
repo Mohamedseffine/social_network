@@ -58,6 +58,7 @@ const Navbar = () => {
               <li className="nav-item">
                 <Link href="/notifications" className="nav-links">
                   Notifications
+                  {/* This is the UI for the notification count */}
                   {unreadNotifications > 0 && (
                     <span className="notification-badge">{unreadNotifications}</span>
                   )}

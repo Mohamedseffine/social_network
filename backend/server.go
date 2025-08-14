@@ -40,6 +40,7 @@ func main() {
 	authRouter.HandleFunc("/requests/{id}/decline", app.DeclineFollowRequestHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/users", app.GetAllUsersHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/users/{id}", app.GetUserHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/users/online", app.GetOnlineUsersHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/users/{id}/followers", app.GetFollowersHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/users/{id}/following", app.GetFollowingHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/users/{id}/posts", app.GetUserPostsHandler).Methods("GET", "OPTIONS")
@@ -58,6 +59,8 @@ func main() {
 	authRouter.HandleFunc("/groups/invites/{id}/decline", app.DeclineGroupInviteHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups/{id}/posts", app.CreateGroupPostHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/groups/{id}/posts", app.GetGroupPostsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/group-posts/{id}/comments", app.CreateGroupPostCommentHandler).Methods("POST", "OPTIONS")
+	authRouter.HandleFunc("/group-posts/{id}/comments", app.GetGroupPostCommentsHandler).Methods("GET", "OPTIONS")
 
 	// Event routes
 	authRouter.HandleFunc("/groups/{id}/events", app.CreateEventHandler).Methods("POST", "OPTIONS")
@@ -67,6 +70,7 @@ func main() {
 
 	// Notification routes
 	authRouter.HandleFunc("/notifications", app.GetNotificationsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/notifications/unread-count", app.GetUnreadNotificationCountHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/notifications/{id}/read", app.MarkNotificationAsReadHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/notifications/{id}", app.DeleteNotificationHandler).Methods("DELETE", "OPTIONS")
 

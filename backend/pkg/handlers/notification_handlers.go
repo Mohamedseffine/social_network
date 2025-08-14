@@ -182,3 +182,23 @@ func (app *App) DeleteNotificationHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Notification deleted successfully"))
 }
+
+func (app *App) GetUnreadNotificationCountHandler(w http.ResponseWriter, r *http.Request) {
+	userID := ForContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	var unreadCount int
+	err := app.DB.QueryRow("SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0", userID).Scan(&unreadCount)
+	if err != nil {
+		http.Error(w, "Failed to get unread notification count", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(map[string]int{"unread_count": unreadCount}); err != nil {
+		http.Error(w, "Failed to encode unread notification count", http.StatusInternalServerError)
+	}
+}

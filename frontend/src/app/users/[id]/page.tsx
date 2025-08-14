@@ -1,68 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "../../../utils/api";
 
 const UserProfilePage = ({ params }: { params: { id: string } }) => {
-  const { user: currentUser } = useAuth(); // Simplified: only need currentUser
+  const { user: currentUser } = useAuth();
   const [profileUser, setProfileUser] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [followStatus, setFollowStatus] = useState("");
   const router = useRouter();
   const { id } = params;
 
+  const fetchUserData = useCallback(async () => {
+    setIsLoading(true);
+    setError("");
+    try {
+      const userRes = await fetch(`${API_BASE_URL}/users/${id}`, {
+        credentials: "include",
+      });
+      if (!userRes.ok) throw new Error("Failed to fetch user data.");
+      const userData = await userRes.json();
+      setProfileUser(userData);
+      setFollowStatus(userData.follow_status || "not_following");
+
+      if (userData.email) {
+        const postsRes = await fetch(`${API_BASE_URL}/users/${id}/posts`, {
+          credentials: "include",
+        });
+        if (postsRes.ok) {
+            const postData = await postsRes.json();
+            setPosts(postData || []);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
-    // Redirect to own profile page if that's what the user is trying to view
     if (currentUser && currentUser.id.toString() === id) {
       router.push("/profile");
       return;
     }
-
-    const fetchUserData = async () => {
-      setIsLoading(true);
-      setError("");
-      try {
-        const userRes = await fetch(`${API_BASE_URL}/users/${id}`, {
-          credentials: "include",
-        });
-        if (!userRes.ok) throw new Error("Failed to fetch user data.");
-        const userData = await userRes.json();
-        setProfileUser(userData);
-
-        // Only fetch posts if the profile is public or if we are following them
-        // The GetUserHandler already returns a limited profile, so we check for a field that only full profiles have, like 'email'
-        if (userData.email) {
-            const postsRes = await fetch(`${API_BASE_URL}/users/${id}/posts`, {
-                credentials: "include",
-            });
-            if (postsRes.ok) setPosts(await postsRes.json());
-        }
-
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (id) {
       fetchUserData();
     }
-  }, [id, currentUser, router]);
+  }, [id, currentUser, router, fetchUserData]);
 
-  const handleFollow = async () => {
+  const handleFollowAction = async () => {
+    const action = (followStatus === 'accepted' || followStatus === 'pending') ? 'unfollow' : 'follow';
     try {
-      const res = await fetch(`${API_BASE_URL}/users/${id}/follow`, {
+      const res = await fetch(`${API_BASE_URL}/users/${id}/${action}`, {
         method: "POST",
         credentials: "include",
       });
       if (!res.ok) {
-        alert(`Follow request failed: ${await res.text()}`);
+        alert(`Request failed: ${await res.text()}`);
       } else {
-        alert("Follow request sent!");
+        // Refetch user data to get the latest follow status
+        fetchUserData();
       }
     } catch (err: any) {
       alert(`An error occurred: ${err.message}`);
@@ -81,20 +83,36 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
     return <div>User not found.</div>;
   }
 
+  const getButtonText = () => {
+    switch (followStatus) {
+      case "accepted":
+        return "Unfollow";
+      case "pending":
+        return "Pending";
+      default:
+        return "Follow";
+    }
+  };
+
   return (
     <div className="profile-container">
       <h1>{profileUser.nickname || `${profileUser.first_name} ${profileUser.last_name}`}</h1>
-      <button onClick={handleFollow}>Follow</button>
+      {followStatus !== "is_self" && (
+        <button onClick={handleFollowAction} disabled={isLoading}>
+          {getButtonText()}
+        </button>
+      )}
       <div className="profile-header">
         <img src={getImageUrl(profileUser.avatar)} alt="Avatar" className="profile-avatar" />
         <div className="profile-info">
-          {/* Only show details if we have them (i.e., profile is public or we are a follower) */}
-          {profileUser.email && (
+          {profileUser.email ? (
             <>
               <p><strong>Email:</strong> {profileUser.email}</p>
               <p><strong>Date of Birth:</strong> {profileUser.date_of_birth}</p>
               {profileUser.about_me && <p><strong>About Me:</strong> {profileUser.about_me}</p>}
             </>
+          ) : (
+            <p>This profile is private.</p>
           )}
         </div>
       </div>

@@ -93,7 +93,11 @@ const ChatPage = () => {
 
   const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedConversation || !ws.current || ws.current.readyState !== WebSocket.OPEN) {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      alert("Cannot send message. Chat is not connected.");
+      return;
+    }
+    if (!newMessage.trim() || !selectedConversation) {
       return;
     }
 
@@ -123,6 +127,8 @@ const ChatPage = () => {
     }
     setNewMessage("");
   };
+
+  const wsReady = ws.current && ws.current.readyState === WebSocket.OPEN;
 
   return (
     <div className="chat-container">
@@ -160,8 +166,11 @@ const ChatPage = () => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type a message..."
+                disabled={!wsReady}
               />
-              <button type="submit" disabled={!ws.current || ws.current.readyState !== WebSocket.OPEN}>Send</button>
+              <button type="submit" disabled={!wsReady}>
+                {wsReady ? 'Send' : 'Connecting...'}
+              </button>
             </form>
           </>
         ) : (

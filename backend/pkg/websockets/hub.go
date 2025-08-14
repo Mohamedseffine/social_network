@@ -156,11 +156,24 @@ type WebSocketMessage struct {
 // Hub maintains the set of active clients and broadcasts messages to the clients.
 type Hub struct {
 	clients        map[int64]*Client // Map userID to Client
+	onlineUsers    map[int64]bool    // Set of online user IDs
 	route          chan *OutgoingMessage
 	register       chan *Client
 	unregister     chan *Client
 	mu             sync.Mutex
 	db             *sql.DB
+}
+
+// GetOnlineUserIDs returns a slice of IDs of online users.
+func (h *Hub) GetOnlineUserIDs() []int64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	var ids []int64
+	for id := range h.onlineUsers {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func (h *Hub) RouteNotification(notification *models.Notification) {
@@ -184,11 +197,38 @@ func (h *Hub) RouteNotification(notification *models.Notification) {
 
 func NewHub(db *sql.DB) *Hub {
 	return &Hub{
-		route:      make(chan *OutgoingMessage),
-		register:   make(chan *Client),
-		unregister: make(chan *Client),
-		clients:    make(map[int64]*Client),
-		db:         db,
+		route:       make(chan *OutgoingMessage),
+		register:    make(chan *Client),
+		unregister:  make(chan *Client),
+		clients:     make(map[int64]*Client),
+		onlineUsers: make(map[int64]bool),
+		db:          db,
+	}
+}
+
+func (h *Hub) broadcastOnlineUsers() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	var onlineUserIDs []int64
+	for id := range h.onlineUsers {
+		onlineUserIDs = append(onlineUserIDs, id)
+	}
+
+	msg := WebSocketMessage{
+		Type:    "online_users",
+		Payload: onlineUserIDs,
+	}
+	jsonMsg, _ := json.Marshal(msg)
+
+	for _, client := range h.clients {
+		select {
+		case client.send <- jsonMsg:
+		default:
+			close(client.send)
+			delete(h.clients, client.userID)
+			delete(h.onlineUsers, client.userID)
+		}
 	}
 }
 
@@ -198,14 +238,18 @@ func (h *Hub) Run() {
 		case client := <-h.register:
 			h.mu.Lock()
 			h.clients[client.userID] = client
+			h.onlineUsers[client.userID] = true
 			h.mu.Unlock()
+			h.broadcastOnlineUsers()
 		case client := <-h.unregister:
 			h.mu.Lock()
 			if _, ok := h.clients[client.userID]; ok {
 				delete(h.clients, client.userID)
+				delete(h.onlineUsers, client.userID)
 				close(client.send)
 			}
 			h.mu.Unlock()
+			h.broadcastOnlineUsers()
 		case message := <-h.route:
 			h.mu.Lock()
 
