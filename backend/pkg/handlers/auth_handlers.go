@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"social-network/backend/pkg/auth"
 	"social-network/backend/pkg/models"
@@ -27,23 +28,6 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
-	if err != nil {
-		http.Error(w, "Invalid date format, expected YYYY-MM-DD", http.StatusBadRequest)
-		return
-	}
-
-	now := time.Now() 
-	age := now.Year() - dob.Year()
-	if now.YearDay() < dob.YearDay() {
-		age-- 
-	}
-
-	if age < 18 {
-		http.Error(w, "You must be at least 18 years old to register", http.StatusBadRequest)
-		return
-	}
-
 	if req.Avatar == "" {
 		req.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
 	}
@@ -54,10 +38,7 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmt, err := app.DB.Prepare(`
-		INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`)
+	stmt, err := app.DB.Prepare("INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
 		return
@@ -66,6 +47,7 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err = stmt.Exec(req.Email, hashedPassword, req.FirstName, req.LastName, req.DateOfBirth, req.Avatar, req.Nickname, req.AboutMe)
 	if err != nil {
+		log.Printf("Error creating user: %v", err)
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
 		return
 	}
@@ -73,8 +55,6 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User created successfully"))
 }
-
-
 
 func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var credentials struct {

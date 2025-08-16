@@ -249,7 +249,6 @@ export default function Home() {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
     const avatarFile = formData.get("avatar") as File;
 
     let avatarPath = "";
@@ -271,7 +270,17 @@ export default function Home() {
         return;
       }
     }
-    const registrationData = { ...data, avatar: avatarPath };
+    
+    const registrationData = {
+      first_name: formData.get("first_name"),
+      last_name: formData.get("last_name"),
+      email: formData.get("email"),
+      password: formData.get("password"),
+      date_of_birth: formData.get("date_of_birth"),
+      avatar: avatarPath,
+      nickname: formData.get("nickname"),
+      about_me: formData.get("about_me"),
+    };
     try {
       const res = await fetch(`${API_BASE_URL}/register`, {
         method: "POST",
@@ -402,6 +411,8 @@ export default function Home() {
                   <input type="email" name="email" placeholder="Email" required />
                   <input type="password" name="password" placeholder="Password" required />
                   <input type="date" name="date_of_birth" placeholder="Date of Birth" required />
+                  <input type="text" name="nickname" placeholder="Nickname (Optional)" />
+                  <textarea name="about_me" placeholder="About Me (Optional)"></textarea>
                   <input type="file" name="avatar" accept="image/*" />
                   <button type="submit">Register</button>
                 </form>

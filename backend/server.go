@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+
 	"social-network/backend/pkg/db/sqlite"
 	"social-network/backend/pkg/handlers"
 	"social-network/backend/pkg/websockets"
@@ -29,6 +30,7 @@ func main() {
 	// Auth routes
 	apiRouter.HandleFunc("/register", app.RegisterHandler).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/login", app.LoginHandler).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")
 
 	// Authenticated routes
 	authRouter := apiRouter.PathPrefix("/").Subrouter()
@@ -88,9 +90,6 @@ func main() {
 	authRouter.HandleFunc("/messages", app.GetMessagesHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/messages/unread-count", app.GetUnreadMessageCountHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/messages/read-all", app.MarkAllMessagesAsReadHandler).Methods("POST", "OPTIONS")
-
-	// Image upload route
-	authRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")
 
 	// Profile privacy route
 	authRouter.HandleFunc("/profile/privacy", app.UpdateProfilePrivacyHandler).Methods("POST", "OPTIONS")
