@@ -6,6 +6,20 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "../../utils/api";
 
+const timeAgo = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
+  const minutes = Math.round(seconds / 60);
+  const hours = Math.round(minutes / 60);
+  const days = Math.round(hours / 24);
+
+  if (seconds < 60) return `${seconds}s ago`;
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  return `${days}d ago`;
+};
+
 const ProfilePage = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
@@ -33,13 +47,13 @@ const ProfilePage = () => {
           fetch(`${API_BASE_URL}/users/${user.id}/following`, { credentials: "include" }),
         ]);
 
-        if (postsRes.ok) setPosts(await postsRes.json());
+        if (postsRes.ok) setPosts(await postsRes.json() || []);
         else setError(prev => `${prev}Failed to fetch posts. `);
 
-        if (followersRes.ok) setFollowers(await followersRes.json());
+        if (followersRes.ok) setFollowers(await followersRes.json() || []);
         else setError(prev => `${prev}Failed to fetch followers. `);
 
-        if (followingRes.ok) setFollowing(await followingRes.json());
+        if (followingRes.ok) setFollowing(await followingRes.json() || []);
         else setError(prev => `${prev}Failed to fetch following. `);
 
       } catch (err: any) {
@@ -77,66 +91,59 @@ const ProfilePage = () => {
 
   return (
     <div className="profile-container">
-      <h1>{user.nickname || `${user.first_name} ${user.last_name}`}</h1>
       <div className="profile-header">
         <img src={getImageUrl(user.avatar)} alt="Avatar" className="profile-avatar" />
         <div className="profile-info">
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Date of Birth:</strong> {user.date_of_birth}</p>
-          {user.about_me && <p><strong>About Me:</strong> {user.about_me}</p>}
-          <div className="privacy-setting">
-            <p><strong>Profile Privacy:</strong> {user.profile_is_public ? "Public" : "Private"}</p>
-            <button onClick={handleTogglePrivacy}>Make {user.profile_is_public ? "Private" : "Public"}</button>
+          <div className="profile-title">
+            <h1>{user.nickname || `${user.first_name} ${user.last_name}`}</h1>
+            <button onClick={handleTogglePrivacy} className="privacy-toggle-btn">
+              Make {user.profile_is_public ? "Private" : "Public"}
+            </button>
+          </div>
+          <div className="profile-stats">
+            <div className="stat-item"><strong>{posts.length}</strong> posts</div>
+            <div className="stat-item"><strong>{followers.length}</strong> followers</div>
+            <div className="stat-item"><strong>{following.length}</strong> following</div>
+          </div>
+          <div className="profile-bio">
+            {user.about_me && <p>{user.about_me}</p>}
+            <p><strong>Email:</strong> {user.email}</p>
+            <p><strong>Profile is:</strong> {user.profile_is_public ? "Public" : "Private"}</p>
           </div>
         </div>
       </div>
 
-      {isPageLoading ? (
-        <div>Loading profile content...</div>
-      ) : error ? (
-        <div className="error">{error}</div>
-      ) : (
-        <div className="profile-content">
-          <h2>Posts</h2>
-          {posts && posts.length > 0 ? (
-            posts.map((post) => (
-              <div key={post.id} className="post">
-                <p>{post.content}</p>
-                {post.image && <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />}
-                <small>{new Date(post.created_at).toLocaleString()}</small>
-              </div>
-            ))
-          ) : (
-            <p>No posts yet.</p>
-          )}
-          <div className="follow-lists">
-            <div className="followers-list">
-              <h2>Followers</h2>
-              {followers && followers.length > 0 ? (
-                followers.map((follower) => (
-                  <div key={follower.id} className="user-item-small">
-                    <Link href={`/users/${follower.id}`}>{follower.first_name} {follower.last_name}</Link>
+      <div className="profile-content">
+        <hr className="divider" />
+        {isPageLoading ? (
+          <div>Loading posts...</div>
+        ) : error ? (
+          <div className="error">{error}</div>
+        ) : (
+          <div className="post-grid">
+            {posts && posts.length > 0 ? (
+              posts.map((post) => (
+                <div key={post.id} className="post-grid-item">
+                  {post.image ? (
+                    <img src={getImageUrl(post.image)} alt="Post" />
+                  ) : (
+                    <div className="post-text-preview styled">{post.content}</div>
+                  )}
+                  <div className="post-grid-overlay">
+                    <div className="overlay-info">
+                      <span>{post.privacy}</span>
+                      <span>{new Date(post.created_at).toLocaleString()}</span>
+
+                    </div>
                   </div>
-                ))
-              ) : (
-                <p>No followers yet.</p>
-              )}
-            </div>
-            <div className="following-list">
-              <h2>Following</h2>
-              {following && following.length > 0 ? (
-                following.map((followed) => (
-                  <div key={followed.id} className="user-item-small">
-                    <Link href={`/users/${followed.id}`}>{followed.first_name} {followed.last_name}</Link>
-                  </div>
-                ))
-              ) : (
-                <p>Not following anyone yet.</p>
-              )}
-            </div>
+                </div>
+              ))
+            ) : (
+              <p>No posts to display.</p>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };
