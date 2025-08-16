@@ -27,23 +27,48 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Vérifier si l'utilisateur a au moins 18 ans
+	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		http.Error(w, "Invalid date format, expected YYYY-MM-DD", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now() // Date dynamique actuelle
+	age := now.Year() - dob.Year()
+	if now.YearDay() < dob.YearDay() {
+		age-- // Corriger si l'anniversaire n'est pas encore passé cette année
+	}
+
+	if age < 18 {
+		http.Error(w, "You must be at least 18 years old to register", http.StatusBadRequest)
+		return
+	}
+
+	// Avatar par défaut si non fourni
 	if req.Avatar == "" {
 		req.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
 	}
 
+	// Hasher le mot de passe
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
 		return
 	}
 
-	stmt, err := app.DB.Prepare("INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+	// Préparer la requête SQL
+	stmt, err := app.DB.Prepare(`
+		INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`)
 	if err != nil {
 		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
 		return
 	}
 	defer stmt.Close()
 
+	// Exécuter la requête
 	_, err = stmt.Exec(req.Email, hashedPassword, req.FirstName, req.LastName, req.DateOfBirth, req.Avatar, req.Nickname, req.AboutMe)
 	if err != nil {
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
@@ -53,6 +78,8 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User created successfully"))
 }
+
+
 
 func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var credentials struct {
