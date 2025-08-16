@@ -6,20 +6,6 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "../../utils/api";
 
-const timeAgo = (dateString: string) => {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
-  const minutes = Math.round(seconds / 60);
-  const hours = Math.round(minutes / 60);
-  const days = Math.round(hours / 24);
-
-  if (seconds < 60) return `${seconds}s ago`;
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
-};
-
 const ProfilePage = () => {
   const { user, isLoading } = useAuth();
   const router = useRouter();
@@ -28,6 +14,10 @@ const ProfilePage = () => {
   const [following, setFollowing] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [modalContent, setModalContent] = useState<'followers' | 'following' | null>(null);
+
+  const openModal = (content: 'followers' | 'following') => setModalContent(content);
+  const closeModal = () => setModalContent(null);
 
   useEffect(() => {
     if (isLoading) return; // Wait until session check is complete
@@ -102,8 +92,12 @@ const ProfilePage = () => {
           </div>
           <div className="profile-stats">
             <div className="stat-item"><strong>{posts.length}</strong> posts</div>
-            <div className="stat-item"><strong>{followers.length}</strong> followers</div>
-            <div className="stat-item"><strong>{following.length}</strong> following</div>
+            <div className="stat-item" onClick={() => openModal('followers')}>
+              <strong>{followers.length}</strong> followers
+            </div>
+            <div className="stat-item" onClick={() => openModal('following')}>
+              <strong>{following.length}</strong> following
+            </div>
           </div>
           <div className="profile-bio">
             {user.about_me && <p>{user.about_me}</p>}
@@ -132,8 +126,7 @@ const ProfilePage = () => {
                   <div className="post-grid-overlay">
                     <div className="overlay-info">
                       <span>{post.privacy}</span>
-                      <span>{new Date(post.created_at).toLocaleString()}</span>
-
+                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                 </div>
@@ -144,6 +137,26 @@ const ProfilePage = () => {
           </div>
         )}
       </div>
+
+      {modalContent && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={closeModal}>&times;</button>
+            <h2>{modalContent === 'followers' ? 'Followers' : 'Following'}</h2>
+            <div className="modal-user-list">
+              {(modalContent === 'followers' ? followers : following).map((person: any) => (
+                <div key={person.id} className="user-item">
+                  <img src={getImageUrl(person.avatar)} alt="User Avatar" className="user-avatar-small" />
+                  <Link href={`/users/${person.id}`}>{person.first_name} {person.last_name}</Link>
+                </div>
+              ))}
+              {(modalContent === 'followers' ? followers : following).length === 0 && (
+                <p>No users to display.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
