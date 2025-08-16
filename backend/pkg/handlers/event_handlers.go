@@ -76,46 +76,60 @@ func (app *App) CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(groupID, userID, req.Title, req.Description, eventTime)
+	res, err := stmt.Exec(groupID, userID, req.Title, req.Description, eventTime)
 	if err != nil {
 		http.Error(w, "Failed to create event", http.StatusInternalServerError)
+		return
+	}
+	eventID, err := res.LastInsertId()
+	if err != nil {
+		log.Printf("CRITICAL: Failed to get last insert ID for event: %v", err)
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("Event created successfully but failed to start notification process"))
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("Event created successfully"))
 
-	// Create notifications for group members
-	rows, err := app.DB.Query("SELECT user_id FROM group_members WHERE group_id = ? AND user_id != ? AND status = 'accepted'", groupID, userID)
-	if err != nil {
-		log.Printf("Failed to get group members for notification: %v", err)
-		return
-	}
-	defer rows.Close()
+	// Run notification creation in a separate goroutine
+	go func() {
+		log.Printf("DEBUG: Event created with ID %d. Starting notification process for group %d.", eventID, groupID)
 
-	var eventID int64
-	err = app.DB.QueryRow("SELECT id FROM events WHERE group_id = ? AND creator_id = ? ORDER BY created_at DESC LIMIT 1", groupID, userID).Scan(&eventID)
-	if err != nil {
-		log.Printf("Failed to get event ID for notification: %v", err)
-		return
-	}
-
-	var group models.Group
-	err = app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
-	if err != nil {
-		log.Printf("Failed to get group info for notification: %v", err)
-		return
-	}
-
-	for rows.Next() {
-		var memberID int64
-		if err := rows.Scan(&memberID); err != nil {
-			log.Printf("Failed to scan member ID for notification: %v", err)
-			continue
+		rows, err := app.DB.Query("SELECT user_id FROM group_members WHERE group_id = ? AND user_id != ? AND status = 'accepted'", groupID, userID)
+		if err != nil {
+			log.Printf("DEBUG: Failed to get group members for notification: %v", err)
+			return
 		}
-		message := fmt.Sprintf("created a new event in '%s': %s", group.Title, req.Title)
-		app.createNotification(memberID, "new_group_event", message, userID, eventID)
-	}
+		defer rows.Close()
+
+		var memberIDs []int64
+		for rows.Next() {
+			var memberID int64
+			if err := rows.Scan(&memberID); err != nil {
+				log.Printf("DEBUG: Failed to scan member ID for notification: %v", err)
+				continue
+			}
+			memberIDs = append(memberIDs, memberID)
+		}
+		log.Printf("DEBUG: Found %d accepted members to notify: %v", len(memberIDs), memberIDs)
+
+		if len(memberIDs) > 0 {
+			var group models.Group
+			err = app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
+			if err != nil {
+				log.Printf("DEBUG: Failed to get group info for notification: %v", err)
+				return // Can't proceed without group title
+			}
+			log.Printf("DEBUG: Group title for notification: %s", group.Title)
+
+			for _, memberID := range memberIDs {
+				log.Printf("DEBUG: Creating notification for member ID: %d", memberID)
+				message := fmt.Sprintf("created a new event in '%s': %s", group.Title, req.Title)
+				app.createNotification(memberID, "new_group_event", message, userID, eventID)
+			}
+		}
+	}()
 }
 
 func (app *App) GetGroupEventsHandler(w http.ResponseWriter, r *http.Request) {
