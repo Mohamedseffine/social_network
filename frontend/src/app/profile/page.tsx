@@ -14,10 +14,7 @@ const ProfilePage = () => {
   const [following, setFollowing] = useState<any[]>([]);
   const [error, setError] = useState("");
   const [isPageLoading, setIsPageLoading] = useState(true);
-  const [modalContent, setModalContent] = useState<'followers' | 'following' | null>(null);
-
-  const openModal = (content: 'followers' | 'following') => setModalContent(content);
-  const closeModal = () => setModalContent(null);
+  const [activePopover, setActivePopover] = useState<'followers' | 'following' | null>(null);
 
   useEffect(() => {
     if (isLoading) return; // Wait until session check is complete
@@ -92,11 +89,43 @@ const ProfilePage = () => {
           </div>
           <div className="profile-stats">
             <div className="stat-item"><strong>{posts.length}</strong> posts</div>
-            <div className="stat-item" onClick={() => openModal('followers')}>
+            <div 
+              className="stat-item popover-container" 
+              onMouseEnter={() => setActivePopover('followers')} 
+              onMouseLeave={() => setActivePopover(null)}
+            >
               <strong>{followers.length}</strong> followers
+              {activePopover === 'followers' && (
+                <div className="popover">
+                  <div className="popover-user-list">
+                    {followers.length > 0 ? followers.map((person: any) => (
+                      <div key={person.id} className="user-item">
+                        <img src={getImageUrl(person.avatar)} alt="User Avatar" className="user-avatar-small" />
+                        <Link href={`/users/${person.id}`}>{person.first_name} {person.last_name}</Link>
+                      </div>
+                    )) : <p>No followers.</p>}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="stat-item" onClick={() => openModal('following')}>
+            <div 
+              className="stat-item popover-container" 
+              onMouseEnter={() => setActivePopover('following')} 
+              onMouseLeave={() => setActivePopover(null)}
+            >
               <strong>{following.length}</strong> following
+              {activePopover === 'following' && (
+                <div className="popover">
+                   <div className="popover-user-list">
+                    {following.length > 0 ? following.map((person: any) => (
+                      <div key={person.id} className="user-item">
+                        <img src={getImageUrl(person.avatar)} alt="User Avatar" className="user-avatar-small" />
+                        <Link href={`/users/${person.id}`}>{person.first_name} {person.last_name}</Link>
+                      </div>
+                    )) : <p>Not following anyone.</p>}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div className="profile-bio">
@@ -138,25 +167,6 @@ const ProfilePage = () => {
         )}
       </div>
 
-      {modalContent && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={closeModal}>&times;</button>
-            <h2>{modalContent === 'followers' ? 'Followers' : 'Following'}</h2>
-            <div className="modal-user-list">
-              {(modalContent === 'followers' ? followers : following).map((person: any) => (
-                <div key={person.id} className="user-item">
-                  <img src={getImageUrl(person.avatar)} alt="User Avatar" className="user-avatar-small" />
-                  <Link href={`/users/${person.id}`}>{person.first_name} {person.last_name}</Link>
-                </div>
-              ))}
-              {(modalContent === 'followers' ? followers : following).length === 0 && (
-                <p>No users to display.</p>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
