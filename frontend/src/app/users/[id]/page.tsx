@@ -100,7 +100,7 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
     <div className="profile-container">
       <h1>{profileUser.nickname || `${profileUser.first_name} ${profileUser.last_name}`}</h1>
       {followStatus !== "is_self" && (
-        <button onClick={handleFollowAction} disabled={isLoading}>
+        <button onClick={handleFollowAction} disabled={isLoading|| followStatus === "pending"}>
           {getButtonText()}
         </button>
       )}
