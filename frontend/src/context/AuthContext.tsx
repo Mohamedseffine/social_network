@@ -15,6 +15,8 @@ interface AuthContextType {
   onlineUsers: any[];
   fetchUnreadMessageCount: () => void;
   sendMessage: (message: any) => void; // New function to send messages via worker
+  notificationTrigger: number;
+  triggerNotificationRefresh: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +29,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [lastChatMessage, setLastChatMessage] = useState<any | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const worker = useRef<SharedWorker | null>(null);
+  const [notificationTrigger, setNotificationTrigger] = useState(0);
+
+  const triggerNotificationRefresh = () => {
+    setNotificationTrigger((prev) => prev + 1);
+  };
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -134,7 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, unreadNotifications, fetchNotifications, unreadMessages, fetchUnreadMessageCount, lastChatMessage, onlineUsers, sendMessage }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, unreadNotifications, fetchNotifications, unreadMessages, fetchUnreadMessageCount, lastChatMessage, onlineUsers, sendMessage, notificationTrigger, triggerNotificationRefresh }}>
       {children}
     </AuthContext.Provider>
   );
