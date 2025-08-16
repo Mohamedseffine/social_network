@@ -202,3 +202,27 @@ func (app *App) GetUnreadNotificationCountHandler(w http.ResponseWriter, r *http
 		http.Error(w, "Failed to encode unread notification count", http.StatusInternalServerError)
 	}
 }
+
+func (app *App) MarkAllNotificationsAsReadHandler(w http.ResponseWriter, r *http.Request) {
+	userID := ForContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	stmt, err := app.DB.Prepare("UPDATE notifications SET is_read = TRUE WHERE user_id = ? AND is_read = FALSE")
+	if err != nil {
+		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(userID)
+	if err != nil {
+		http.Error(w, "Failed to mark all notifications as read", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("All notifications marked as read"))
+}

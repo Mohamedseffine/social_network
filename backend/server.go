@@ -74,6 +74,7 @@ func main() {
 	// Notification routes
 	authRouter.HandleFunc("/notifications", app.GetNotificationsHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/notifications/unread-count", app.GetUnreadNotificationCountHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/notifications/read-all", app.MarkAllNotificationsAsReadHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/notifications/{id}/read", app.MarkNotificationAsReadHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/notifications/{id}", app.DeleteNotificationHandler).Methods("DELETE", "OPTIONS")
 
@@ -86,6 +87,7 @@ func main() {
 	authRouter.HandleFunc("/conversations", app.GetConversationsHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/messages", app.GetMessagesHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/messages/unread-count", app.GetUnreadMessageCountHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/messages/read-all", app.MarkAllMessagesAsReadHandler).Methods("POST", "OPTIONS")
 
 	// Image upload route
 	authRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")

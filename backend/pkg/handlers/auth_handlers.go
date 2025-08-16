@@ -80,6 +80,12 @@ func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Delete any existing sessions for this user
+	if err := auth.DeleteUserSessions(app.DB, user.ID); err != nil {
+		http.Error(w, "Failed to clear existing sessions", http.StatusInternalServerError)
+		return
+	}
+
 	token, err := auth.CreateSession(app.DB, user.ID)
 	if err != nil {
 		http.Error(w, "Failed to create session", http.StatusInternalServerError)

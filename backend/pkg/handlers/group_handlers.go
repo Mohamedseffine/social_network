@@ -305,10 +305,10 @@ func (app *App) AcceptGroupRequestHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Mark the notification as read
-	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'group_join_request' AND related_id = ?", memberID)
+	// Delete the notification
+	_, err = app.DB.Exec("DELETE FROM notifications WHERE type = 'group_join_request' AND related_id = ?", memberID)
 	if err != nil {
-		log.Printf("Failed to mark group join notification as read: %v", err)
+		log.Printf("Failed to delete group join notification: %v", err)
 	}
 
 	// Notify the user that their request was accepted
@@ -393,10 +393,10 @@ func (app *App) DeclineGroupRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Mark the notification as read
-	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'group_join_request' AND related_id = ?", memberID)
+	// Delete the notification
+	_, err = app.DB.Exec("DELETE FROM notifications WHERE type = 'group_join_request' AND related_id = ?", memberID)
 	if err != nil {
-		log.Printf("Failed to mark group join notification as read: %v", err)
+		log.Printf("Failed to delete group join notification: %v", err)
 	}
 
 	// Notify the user that their request was declined
@@ -491,28 +491,13 @@ func (app *App) InviteToGroupHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Failed to get last insert ID for group invite: %v", err)
 	} else {
-		notificationStmt, err := app.DB.Prepare("INSERT INTO notifications (user_id, type, message, related_id) VALUES (?, ?, ?, ?)")
+		var group models.Group
+		err := app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
 		if err != nil {
-			log.Printf("Failed to prepare notification statement: %v", err)
+			log.Printf("Failed to get group info for notification: %v", err)
 		} else {
-			defer notificationStmt.Close()
-			var invitingUser models.User
-			err := app.DB.QueryRow("SELECT first_name, last_name FROM users WHERE id = ?", invitingUserID).Scan(&invitingUser.FirstName, &invitingUser.LastName)
-			if err != nil {
-				log.Printf("Failed to get inviting user info for notification: %v", err)
-			} else {
-				var group models.Group
-				err := app.DB.QueryRow("SELECT title FROM groups WHERE id = ?", groupID).Scan(&group.Title)
-				if err != nil {
-					log.Printf("Failed to get group info for notification: %v", err)
-				} else {
-					message := fmt.Sprintf("%s %s invited you to join the group '%s'.", invitingUser.FirstName, invitingUser.LastName, group.Title)
-					_, err = notificationStmt.Exec(req.UserID, "group_invite", message, inviteID)
-					if err != nil {
-						log.Printf("Failed to create notification: %v", err)
-					}
-				}
-			}
+			message := fmt.Sprintf("invited you to join the group '%s'.", group.Title)
+			app.createNotification(req.UserID, "group_invite", message, invitingUserID, inviteID)
 		}
 	}
 }
@@ -574,10 +559,10 @@ func (app *App) AcceptGroupInviteHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Mark the notification as read
-	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'group_invite' AND related_id = ?", inviteID)
+	// Delete the notification
+	_, err = app.DB.Exec("DELETE FROM notifications WHERE type = 'group_invite' AND related_id = ?", inviteID)
 	if err != nil {
-		log.Printf("Failed to mark group invite notification as read: %v", err)
+		log.Printf("Failed to delete group invite notification: %v", err)
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -639,6 +624,12 @@ func (app *App) DeclineGroupInviteHandler(w http.ResponseWriter, r *http.Request
 	if rowsAffected == 0 {
 		http.Error(w, "Invitation not found or already handled", http.StatusNotFound)
 		return
+	}
+
+	// Delete the notification
+	_, err = app.DB.Exec("DELETE FROM notifications WHERE type = 'group_invite' AND related_id = ?", inviteID)
+	if err != nil {
+		log.Printf("Failed to delete group invite notification: %v", err)
 	}
 
 	w.WriteHeader(http.StatusOK)

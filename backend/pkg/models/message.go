@@ -10,4 +10,5 @@ type Message struct {
 	GroupID    *int64    `json:"group_id,omitempty"`
 	Content    string    `json:"content"`
 	CreatedAt  time.Time `json:"created_at"`
+	IsRead     *bool     `json:"is_read,omitempty"`
 }

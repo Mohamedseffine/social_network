@@ -117,7 +117,7 @@ func (app *App) GetMessagesHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	baseQuery := `
-		SELECT m.id, m.sender_id, u.first_name, m.receiver_id, m.group_id, m.content, m.created_at
+		SELECT m.id, m.sender_id, u.first_name, m.receiver_id, m.group_id, m.content, m.created_at, m.is_read
 		FROM messages m
 		JOIN users u ON m.sender_id = u.id
 	`
@@ -176,6 +176,7 @@ func scanMessages(rows *sql.Rows) ([]models.Message, error) {
 		var msg models.Message
 		var receiverID sql.NullInt64
 		var groupID sql.NullInt64
+		var isRead sql.NullBool
 
 		err := rows.Scan(
 			&msg.ID,
@@ -185,6 +186,7 @@ func scanMessages(rows *sql.Rows) ([]models.Message, error) {
 			&groupID,
 			&msg.Content,
 			&msg.CreatedAt,
+			&isRead,
 		)
 		if err != nil {
 			return nil, err
@@ -194,6 +196,9 @@ func scanMessages(rows *sql.Rows) ([]models.Message, error) {
 		}
 		if groupID.Valid {
 			msg.GroupID = &groupID.Int64
+		}
+		if isRead.Valid {
+			msg.IsRead = &isRead.Bool
 		}
 		messages = append(messages, msg)
 	}
@@ -219,4 +224,29 @@ func (app *App) GetUnreadMessageCountHandler(w http.ResponseWriter, r *http.Requ
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
+}
+
+// MarkAllMessagesAsReadHandler marks all unread messages for the current user as read.
+func (app *App) MarkAllMessagesAsReadHandler(w http.ResponseWriter, r *http.Request) {
+	currentUserID := ForContext(r.Context())
+	if currentUserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	stmt, err := app.DB.Prepare("UPDATE messages SET is_read = TRUE WHERE receiver_id = ? AND is_read = FALSE")
+	if err != nil {
+		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
+		return
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(currentUserID)
+	if err != nil {
+		http.Error(w, "Failed to mark all messages as read", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("All messages marked as read"))
 }

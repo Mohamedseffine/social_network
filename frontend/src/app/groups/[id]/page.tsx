@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "../../../utils/api";
+import { usePopup } from "../../../context/PopupContext";
 import { Comment, CommentCard } from "../../components/Comment";
 
 const GroupPage = ({ params }: { params: { id: string } }) => {
+  const { showPopup } = usePopup();
   const [group, setGroup] = useState<any>(null);
   const [membershipStatus, setMembershipStatus] = useState<string | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -135,7 +137,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         credentials: "include",
       });
       if (res.ok) {
-        alert(`You are now marked as ${status}`);
+        showPopup(`You are now marked as ${status}`, 'success');
         // If attendees for this event are visible, refetch them
         if (visibleAttendees === eventId) {
           fetchAttendees(eventId);
@@ -220,7 +222,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         credentials: "include",
       });
       if (res.ok) {
-        alert("Request to join sent successfully!");
+        showPopup("Request to join sent successfully!", 'success');
         setMembershipStatus("pending");
       } else {
         const errorText = await res.text();
@@ -241,15 +243,15 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
       });
 
       if (res.ok) {
-        alert("Invitation sent successfully!");
+        showPopup("Invitation sent successfully!", 'success');
         setSearchTerm("");
         setSearchResults([]);
       } else {
         const errorText = await res.text();
-        alert(`Failed to send invitation: ${errorText}`);
+        showPopup(`Failed to send invitation: ${errorText}`, 'error');
       }
     } catch (err: any) {
-      alert(`An error occurred: ${err.message}`);
+      showPopup(`An error occurred: ${err.message}`, 'error');
     }
   };
 

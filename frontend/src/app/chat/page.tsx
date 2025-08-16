@@ -3,62 +3,75 @@
 import { useEffect, useState, useRef } from "react";
 import { API_BASE_URL } from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
+import { usePopup } from "../../context/PopupContext";
+import Picker from "emoji-picker-react";
+import type { EmojiClickData } from "emoji-picker-react";
 import "./Chat.css";
 
 const ChatPage = () => {
-  const { user, ws, lastChatMessage, fetchNotifications, fetchUnreadMessageCount } = useAuth();
+  const { user, lastChatMessage, fetchNotifications, fetchUnreadMessageCount, sendMessage } = useAuth();
+  const { showPopup } = usePopup();
   const [conversations, setConversations] = useState<any[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [showPicker, setShowPicker] = useState(false);
+
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    setNewMessage((prevInput) => prevInput + emojiData.emoji);
+    setShowPicker(false);
+  };
+
+  const fetchConversations = async () => {
+    if (!user) return;
+    try {
+      const convRes = await fetch(`${API_BASE_URL}/conversations`, {
+        credentials: "include",
+      });
+      if (convRes.ok) {
+        const data = await convRes.json();
+        setConversations(data);
+      } else {
+        console.error("Failed to fetch conversations");
+      }
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+    }
+  };
 
   useEffect(() => {
-    const fetchConversations = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/conversations`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setConversations(data);
-        } else {
-          console.error("Failed to fetch conversations");
-        }
-      } catch (error) {
-        console.error("Error fetching conversations:", error);
-      }
-    };
-
-    if (user) {
-        fetchConversations();
-    }
+    fetchConversations();
   }, [user]);
 
   useEffect(() => {
-    if (!lastChatMessage || !selectedConversation || !user) return;
-
-    const [convType, convIdStr] = selectedConversation.id.split('-');
-    const convId = parseInt(convIdStr, 10);
+    if (!lastChatMessage || !user) return;
 
     let messageBelongsToCurrentConversation = false;
-    if (lastChatMessage.type === 'private_message' && convType === 'user') {
-      if ((lastChatMessage.sender_id === convId && lastChatMessage.target_id === user.id) ||
-          (lastChatMessage.sender_id === user.id && lastChatMessage.target_id === convId)) {
-        messageBelongsToCurrentConversation = true;
-      }
-    } else if (lastChatMessage.type === 'group_message' && convType === 'group') {
-      if (lastChatMessage.target_id === convId) {
-        messageBelongsToCurrentConversation = true;
+    if (selectedConversation) {
+      const [convType, convIdStr] = selectedConversation.id.split('-');
+      const convId = parseInt(convIdStr, 10);
+      if (lastChatMessage.type === 'private_message' && convType === 'user') {
+        if ((lastChatMessage.sender_id === convId && lastChatMessage.target_id === user.id) ||
+            (lastChatMessage.sender_id === user.id && lastChatMessage.target_id === convId)) {
+          messageBelongsToCurrentConversation = true;
+        }
+      } else if (lastChatMessage.type === 'group_message' && convType === 'group') {
+        if (lastChatMessage.target_id === convId) {
+          messageBelongsToCurrentConversation = true;
+        }
       }
     }
 
     if (messageBelongsToCurrentConversation) {
-        // Prevent adding the optimistic message again
-        if (lastChatMessage.sender_id !== user.id) {
-            setMessages((prevMessages) => [...prevMessages, lastChatMessage]);
-        }
+      if (lastChatMessage.sender_id !== user.id) {
+          setMessages((prevMessages) => [...prevMessages, lastChatMessage]);
+      }
+    } else {
+      // If message is not for the current conversation, or no conversation is selected,
+      // refetch the conversation list to update unread counts.
+      fetchConversations();
     }
-  }, [lastChatMessage, selectedConversation, user]);
+  }, [lastChatMessage, user, selectedConversation]);
 
   const handleSelectConversation = async (conversation: any) => {
     setSelectedConversation(conversation);
@@ -93,10 +106,6 @@ const ChatPage = () => {
 
   const handleSendMessage = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
-      alert("Cannot send message. Chat is not connected.");
-      return;
-    }
     if (!newMessage.trim() || !selectedConversation) {
       return;
     }
@@ -113,7 +122,7 @@ const ChatPage = () => {
       },
     };
 
-    ws.current.send(JSON.stringify(message));
+    sendMessage(message);
 
     if (user) {
         const optimisticMessage = {
@@ -128,8 +137,6 @@ const ChatPage = () => {
     setNewMessage("");
   };
 
-  const wsReady = ws.current && ws.current.readyState === WebSocket.OPEN;
-
   return (
     <div className="chat-container">
       <div className="conversation-list">
@@ -142,7 +149,7 @@ const ChatPage = () => {
           >
             {conv.name}
             {conv.unread_count > 0 && (
-              <span className="unread-badge">{conv.unread_count}</span>
+              <span className="notification-bell-list">🔔</span>
             )}
           </div>
         ))}
@@ -166,12 +173,23 @@ const ChatPage = () => {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Type a message..."
-                disabled={!wsReady}
               />
-              <button type="submit" disabled={!wsReady}>
-                {wsReady ? 'Send' : 'Connecting...'}
+              <button
+                type="button"
+                className="emoji-button"
+                onClick={() => setShowPicker((val) => !val)}
+              >
+                😊
+              </button>
+              <button type="submit">
+                Send
               </button>
             </form>
+            {showPicker && (
+              <div className="picker-container">
+                <Picker onEmojiClick={onEmojiClick} />
+              </div>
+            )}
           </>
         ) : (
           <div className="no-conversation-selected">

@@ -191,10 +191,10 @@ func (app *App) AcceptFollowRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Mark the notification as read
-	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'follow_request' AND related_id = ?", requestID)
+	// Delete the notification
+	_, err = app.DB.Exec("DELETE FROM notifications WHERE type = 'follow_request' AND related_id = ?", requestID)
 	if err != nil {
-		log.Printf("Failed to mark follow request notification as read: %v", err)
+		log.Printf("Failed to delete follow request notification: %v", err)
 		// Do not fail the request, as the main action succeeded
 	}
 
@@ -255,10 +255,10 @@ func (app *App) DeclineFollowRequestHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Mark the notification as read
-	_, err = app.DB.Exec("UPDATE notifications SET is_read = 1 WHERE type = 'follow_request' AND related_id = ?", requestID)
+	// Delete the notification
+	_, err = app.DB.Exec("DELETE FROM notifications WHERE type = 'follow_request' AND related_id = ?", requestID)
 	if err != nil {
-		log.Printf("Failed to mark follow request notification as read: %v", err)
+		log.Printf("Failed to delete follow request notification: %v", err)
 		// Do not fail the request, as the main action succeeded
 	}
 

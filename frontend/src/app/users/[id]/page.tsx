@@ -3,10 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
+import { usePopup } from "../../../context/PopupContext";
 import { API_BASE_URL, getImageUrl } from "../../../utils/api";
 
 const UserProfilePage = ({ params }: { params: { id: string } }) => {
   const { user: currentUser } = useAuth();
+  const { showPopup } = usePopup();
   const [profileUser, setProfileUser] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,13 +63,13 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
         credentials: "include",
       });
       if (!res.ok) {
-        alert(`Request failed: ${await res.text()}`);
+        showPopup(`Request failed: ${await res.text()}`, 'error');
       } else {
         // Refetch user data to get the latest follow status
         fetchUserData();
       }
     } catch (err: any) {
-      alert(`An error occurred: ${err.message}`);
+      showPopup(`An error occurred: ${err.message}`, 'error');
     }
   };
 

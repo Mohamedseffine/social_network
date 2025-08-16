@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
+import { usePopup } from "../../context/PopupContext";
 import { API_BASE_URL } from "../../utils/api";
 
 const Notifications = () => {
+  const { showPopup } = usePopup();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -13,13 +16,23 @@ const Notifications = () => {
   const fetchNotificationsData = async () => {
     setLoading(true);
     try {
+      // First, mark all notifications as read on the backend.
+      await fetch(`${API_BASE_URL}/notifications/read-all`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      // After marking as read, fetch the fresh unread count (should be 0)
+      fetchUnreadCount();
+
+      // Then, fetch the notifications themselves to display.
       const res = await fetch(`${API_BASE_URL}/notifications`, {
         credentials: "include",
       });
+
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
-        fetchUnreadCount(); // Update the badge count in the navbar
       } else {
         const errorText = await res.text();
         setError(`Failed to fetch notifications: ${errorText}`);
@@ -33,7 +46,7 @@ const Notifications = () => {
 
   useEffect(() => {
     fetchNotificationsData();
-  }, []);
+  }, []); // Dependency array is empty, so it runs once on mount.
 
   const handleAction = async (url: string) => {
     try {
@@ -46,10 +59,10 @@ const Notifications = () => {
         fetchNotificationsData(); // Refresh notifications and the count
       } else {
         const errorText = await res.text();
-        alert(`Action failed: ${errorText}`);
+        showPopup(`Action failed: ${errorText}`, 'error');
       }
     } catch (err: any) {
-      alert(`An error occurred: ${err.message}`);
+      showPopup(`An error occurred: ${err.message}`, 'error');
     }
   };
 
@@ -65,16 +78,14 @@ const Notifications = () => {
         fetchUnreadCount(); // The number of unread might have changed
       } else {
         const errorText = await res.text();
-        alert(`Failed to delete notification: ${errorText}`);
+        showPopup(`Failed to delete notification: ${errorText}`, 'error');
       }
     } catch (err: any) {
-      alert(`An error occurred: ${err.message}`);
+      showPopup(`An error occurred: ${err.message}`, 'error');
     }
   };
 
   const renderActions = (notification: any) => {
-    if (notification.is_read) return null;
-
     let acceptUrl = "";
     let declineUrl = "";
 
@@ -91,6 +102,14 @@ const Notifications = () => {
         acceptUrl = `${API_BASE_URL}/groups/requests/${notification.related_id}/accept`;
         declineUrl = `${API_BASE_URL}/groups/requests/${notification.related_id}/decline`;
         break;
+      case "group_request_accepted":
+        return (
+          <div className="notification-actions">
+            <Link href={`/groups/${notification.related_id}`} className="btn-accept">
+              Go to Group
+            </Link>
+          </div>
+        );
       default:
         return null;
     }

@@ -43,6 +43,7 @@ type MessagePayload struct {
 
 // OutgoingMessage defines the structure of messages sent to clients
 type OutgoingMessage struct {
+	ID         int64  `json:"id"`
 	Content    string `json:"content"`
 	SenderID   int64  `json:"sender_id"`
 	SenderName string `json:"sender_name"`
@@ -90,10 +91,16 @@ func (c *Client) readPump() {
 			groupID = sql.NullInt64{Int64: incomingMsg.Payload.GroupID, Valid: true}
 		}
 
-		_, err = stmt.Exec(c.userID, receiverID, groupID, incomingMsg.Payload.Content, now)
+		res, err := stmt.Exec(c.userID, receiverID, groupID, incomingMsg.Payload.Content, now)
 		stmt.Close()
 		if err != nil {
 			log.Printf("Failed to insert message into database: %v", err)
+			continue
+		}
+
+		messageID, err := res.LastInsertId()
+		if err != nil {
+			log.Printf("Failed to get last insert ID for message: %v", err)
 			continue
 		}
 
@@ -107,6 +114,7 @@ func (c *Client) readPump() {
 
 		// Create the message to be routed
 		outgoingMsg := OutgoingMessage{
+			ID:         messageID,
 			Content:    incomingMsg.Payload.Content,
 			SenderID:   c.userID,
 			SenderName: senderName,

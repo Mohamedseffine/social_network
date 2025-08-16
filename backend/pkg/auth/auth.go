@@ -66,3 +66,9 @@ func DeleteSession(db *sql.DB, token string) error {
 	_, err := db.Exec("DELETE FROM sessions WHERE token = ?", token)
 	return err
 }
+
+// DeleteUserSessions removes all sessions for a given user.
+func DeleteUserSessions(db *sql.DB, userID int64) error {
+	_, err := db.Exec("DELETE FROM sessions WHERE user_id = ?", userID)
+	return err
+}

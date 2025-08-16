@@ -11,10 +11,10 @@ interface AuthContextType {
   unreadNotifications: number;
   fetchNotifications: () => void;
   unreadMessages: number;
-  ws: React.RefObject<WebSocket | null>;
   lastChatMessage: any | null;
   onlineUsers: any[];
   fetchUnreadMessageCount: () => void;
+  sendMessage: (message: any) => void; // New function to send messages via worker
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [lastChatMessage, setLastChatMessage] = useState<any | null>(null);
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
-  const ws = useRef<WebSocket | null>(null);
+  const worker = useRef<SharedWorker | null>(null);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -34,7 +34,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const res = await fetch(`${API_BASE_URL}/notifications/unread-count`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        console.log("Unread notifications count:", data.unread_count);
         setUnreadNotifications(data.unread_count);
       }
     } catch (err) {
@@ -54,6 +53,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to fetch unread message count", err);
     }
   }, [user]);
+
+  const sendMessage = (message: any) => {
+    if (worker.current) {
+      worker.current.port.postMessage(message);
+    } else {
+      console.error("Shared Worker is not available.");
+    }
+  };
 
   useEffect(() => {
     const checkSession = async () => {
@@ -75,69 +82,59 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     checkSession();
   }, []);
 
-  const fetchOnlineUsers = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/users/online`, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        setOnlineUsers(data || []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch online users", err);
-    }
-  }, []);
-
   useEffect(() => {
-    if (user && !ws.current) {
-      fetchOnlineUsers(); // Fetch initial list
-      const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
-      ws.current = new WebSocket(wsUrl);
-      ws.current.onopen = () => console.log("Global WebSocket connected");
-      ws.current.onclose = () => {
-        console.log("Global WebSocket disconnected");
-        setOnlineUsers([]); // Clear online users on disconnect
-      };
-      ws.current.onerror = (error) => console.error("Global WebSocket error:", error);
+    if (user && !worker.current) {
+      // Path to the worker script
+      worker.current = new SharedWorker('/socket-worker.js');
 
-      ws.current.onmessage = (event) => {
-        const message = JSON.parse(event.data);
+      worker.current.port.onmessage = (event) => {
+        const message = event.data;
+        // Logic to handle messages from the worker
         if (message.type === 'new_notification') {
           fetchNotifications();
-          fetchUnreadMessageCount(); // A notification might relate to a new message
+          fetchUnreadMessageCount();
         } else if (message.type === 'chat_message') {
            setLastChatMessage(message.payload);
            fetchUnreadMessageCount();
         } else if (message.type === 'online_users') {
           setOnlineUsers(message.payload);
+        } else if (message.type === 'WS_OPEN') {
+            console.log("AuthContext: WebSocket connection confirmed open by worker.");
+            // Fetch initial data now that we know the connection is good
+            fetchNotifications();
+            fetchUnreadMessageCount();
         }
       };
 
-      fetchNotifications();
-      fetchUnreadMessageCount();
+      // Start the port and initialize the worker with the WebSocket URL
+      worker.current.port.start();
+      const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
+      worker.current.port.postMessage({ type: 'INIT_WS', payload: wsUrl });
+
+    } else if (!user && worker.current) {
+        worker.current.port.close();
+        worker.current = null;
     }
-    if (!user && ws.current) {
-        ws.current.close();
-        ws.current = null;
-    }
-    return () => {
-      if (ws.current) ws.current.close();
-    };
-  }, [user]); // Removed fetchNotifications and fetchUnreadMessageCount to prevent loops
+
+    // No return/cleanup function needed in the same way, as the worker persists.
+    // The port will be garbage collected when the context unmounts.
+  }, [user, fetchNotifications, fetchUnreadMessageCount]);
 
   const login = (user: any) => setUser(user);
 
   const logout = () => {
-    if (ws.current) {
-        ws.current.close();
-        ws.current = null;
+    if (worker.current) {
+        worker.current.port.close();
+        worker.current = null;
     }
     setUser(null);
     setUnreadNotifications(0);
     setUnreadMessages(0);
+    setOnlineUsers([]);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading, unreadNotifications, fetchNotifications, unreadMessages, fetchUnreadMessageCount, ws, lastChatMessage, onlineUsers }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, unreadNotifications, fetchNotifications, unreadMessages, fetchUnreadMessageCount, lastChatMessage, onlineUsers, sendMessage }}>
       {children}
     </AuthContext.Provider>
   );
