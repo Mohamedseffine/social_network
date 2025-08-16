@@ -30,7 +30,7 @@ func main() {
 	// Auth routes
 	apiRouter.HandleFunc("/register", app.RegisterHandler).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/login", app.LoginHandler).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")//deplacer ici pour marche
 
 	// Authenticated routes
 	authRouter := apiRouter.PathPrefix("/").Subrouter()
