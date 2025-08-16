@@ -58,8 +58,8 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var credentials struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Identifier string `json:"identifier"`
+		Password   string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
@@ -67,7 +67,7 @@ func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user models.User
-	err := app.DB.QueryRow("SELECT id, password FROM users WHERE email = ?", credentials.Email).Scan(&user.ID, &user.Password)
+	err := app.DB.QueryRow("SELECT id, password FROM users WHERE email = ? OR nickname = ?", credentials.Identifier, credentials.Identifier).Scan(&user.ID, &user.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "Invalid credentials", http.StatusUnauthorized)

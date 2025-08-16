@@ -393,7 +393,7 @@ export default function Home() {
               <div id="login-form" className="form-container">
                 <h2>Login</h2>
                 <form id="login" onSubmit={handleLogin}>
-                  <input type="email" name="email" placeholder="Email" required />
+                  <input type="text" name="identifier" placeholder="Email or Nickname" required />
                   <input type="password" name="password" placeholder="Password" required />
                   <button type="submit">Login</button>
                 </form>
