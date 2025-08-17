@@ -15,7 +15,9 @@ const ProfilePage = () => {
   const [error, setError] = useState("");
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [activePopover, setActivePopover] = useState<'followers' | 'following' | null>(null);
-
+  const [isPrivate, setIsPrivate] = useState<boolean>()
+  // console.log(user.profile_is_public);
+  
   useEffect(() => {
     if (isLoading) return; // Wait until session check is complete
 
@@ -46,6 +48,7 @@ const ProfilePage = () => {
       } catch (err: any) {
         setError(`An error occurred: ${err.message}`);
       } finally {
+        setIsPrivate(user.profile_is_public)
         setIsPageLoading(false);
       }
     };
@@ -62,7 +65,7 @@ const ProfilePage = () => {
         credentials: "include",
       });
       if (res.ok) {
-        window.location.reload();
+        setIsPrivate(!isPrivate)
       } else {
         setError(`Failed to update privacy: ${await res.text()}`);
       }
@@ -94,7 +97,7 @@ const ProfilePage = () => {
                 `${user.first_name} ${user.last_name}`
               )}
             </h1>            <button onClick={handleTogglePrivacy} className="privacy-toggle-btn">
-              Make {user.profile_is_public ? "Private" : "Public"}
+              Make {isPrivate ? "Private" : "Public"}
             </button>
           </div>
           <div className="profile-stats">
