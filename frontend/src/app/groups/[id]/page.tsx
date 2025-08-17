@@ -304,7 +304,12 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         form.reset();
         fetchMemberContent();
       } else {
-        setError(`Failed to create event: ${await res.text()}`);
+        let errtxt = await res.text()
+        if (errtxt.trim()==="Event time must be in the future".trim()) {
+          alert(errtxt)
+        }else{
+          setError(`Failed to create event: ${errtxt}`);
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);

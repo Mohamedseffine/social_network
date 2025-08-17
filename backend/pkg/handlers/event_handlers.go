@@ -68,6 +68,10 @@ func (app *App) CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid event time format", http.StatusBadRequest)
 		return
 	}
+	if eventTime.Before(time.Now()) {
+		http.Error(w, "Event time must be in the future", http.StatusBadRequest)
+		return
+	}
 
 	stmt, err := app.DB.Prepare("INSERT INTO events (group_id, creator_id, title, description, event_time) VALUES (?, ?, ?, ?, ?)")
 	if err != nil {
