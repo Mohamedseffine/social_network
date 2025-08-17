@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "../../../utils/api";
+import { API_BASE_URL, getImageUrl } from "../../../utils/api";
 import { usePopup } from "../../../context/PopupContext";
 import { Comment, CommentCard } from "../../components/Comment";
 
@@ -260,11 +260,31 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
     const form = e.currentTarget;
     const formData = new FormData(form);
     const content = formData.get("content");
+    const imageFile = formData.get("content") as File;
+    let imagePath = "";
+    if (imageFile && imageFile.size > 0) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("image", imageFile);
+        const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+          method: "POST", body: uploadFormData, credentials: "include",
+        });
+        if (uploadRes.ok) {
+          imagePath = (await uploadRes.json()).path;
+        } else {
+          alert(`Image upload failed: ${await uploadRes.text()}`);
+          return;
+        }
+      } catch (err: any) {
+        alert(`Image upload failed: ${err.message}`);
+        return;
+      }
+    }
     try {
       const res = await fetch(`${API_BASE_URL}/groups/${id}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, image: imagePath }),
         credentials: "include",
       });
       if (res.ok) {
@@ -305,9 +325,9 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         fetchMemberContent();
       } else {
         let errtxt = await res.text()
-        if (errtxt.trim()==="Event time must be in the future".trim()) {
+        if (errtxt.trim() === "Event time must be in the future".trim()) {
           alert(errtxt)
-        }else{
+        } else {
           setError(`Failed to create event: ${errtxt}`);
         }
       }
@@ -330,6 +350,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
                 <h3>Create a Post in {group.title}</h3>
                 <form onSubmit={handleCreatePost}>
                   <textarea name="content" placeholder="What's on your mind?" required />
+                  <input type="file" name="image" accept="image/*" />
                   <button type="submit">Post</button>
                 </form>
               </div>
@@ -372,29 +393,32 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
               {posts && posts.length > 0 ? (
                 posts.map((post) => (
                   <div key={post.id} className="post card">
-                    <p>{post.content}</p>
                     <small>{new Date(post.created_at).toLocaleString()}</small>
+                    <p>{post.content}</p>
+                    {post.image && (
+                      <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />
+                    )}
                     <div className="post-actions">
                       <button onClick={() => toggleComments(post.id)} className="toggle-comments-btn">
-                          {visibleComments === post.id ? 'Hide' : 'View'} Comments
+                        {visibleComments === post.id ? 'Hide' : 'View'} Comments
                       </button>
                     </div>
                     {visibleComments === post.id && (
-                       <div className="comments-section">
-                         <form onSubmit={(e) => handleCreateComment(e, post.id)} className="comment-form">
-                            <textarea name="content" placeholder="Write a comment..." required />
-                            <button type="submit">Comment</button>
-                         </form>
-                         <div className="comments-list">
-                           {comments[post.id] ? (
-                              comments[post.id].map((comment: Comment) => (
-                                <CommentCard key={comment.id} comment={comment} />
-                              ))
-                           ) : (
-                             <p>Loading comments...</p>
-                           )}
-                         </div>
-                       </div>
+                      <div className="comments-section">
+                        <form onSubmit={(e) => handleCreateComment(e, post.id)} className="comment-form">
+                          <textarea name="content" placeholder="Write a comment..." required />
+                          <button type="submit">Comment</button>
+                        </form>
+                        <div className="comments-list">
+                          {comments[post.id] ? (
+                            comments[post.id].map((comment: Comment) => (
+                              <CommentCard key={comment.id} comment={comment} />
+                            ))
+                          ) : (
+                            <p>Loading comments...</p>
+                          )}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))

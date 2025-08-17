@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"social-network/backend/pkg/models"
 	"strconv"
@@ -255,6 +256,7 @@ func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := app.DB.Query(query, postID)
 	if err != nil {
+		log.Println(err, "line 259")
 		http.Error(w, "Failed to get comments", http.StatusInternalServerError)
 		return
 	}
@@ -263,10 +265,16 @@ func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	var comments []models.Comment
 	for rows.Next() {
 		var comment models.Comment
-		var avatar sql.NullString
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.ImageUrl, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
+		var avatar, image sql.NullString
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &image, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
+			log.Println(err, "line 270")
 			http.Error(w, "Failed to scan comment", http.StatusInternalServerError)
 			return
+		}
+		if image.Valid {
+			comment.ImageUrl = image.String
+		} else {
+			comment.ImageUrl = ""
 		}
 		if avatar.Valid && avatar.String != "" {
 			comment.AuthorAvatar = avatar.String
@@ -277,12 +285,14 @@ func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := rows.Err(); err != nil {
+		log.Println(err, "line 283")
 		http.Error(w, "Error iterating over comments", http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(comments); err != nil {
+		log.Println(err, "line 290")
 		http.Error(w, "Failed to encode comments", http.StatusInternalServerError)
 	}
 }

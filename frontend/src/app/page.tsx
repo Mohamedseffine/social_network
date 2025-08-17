@@ -15,7 +15,7 @@ const PostCard = ({ post }: { post: any }) => {
   const [commentContent, setCommentContent] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
-   const showMessage = (msg: string, error: boolean = false) => {
+  const showMessage = (msg: string, error: boolean = false) => {
     setMessage(msg);
     setIsError(error);
     setTimeout(() => {
@@ -51,8 +51,9 @@ const PostCard = ({ post }: { post: any }) => {
 
   const handleCreateComment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    let form = e.currentTarget
     if (!commentContent.trim()) return;
-    let data = new FormData(e.currentTarget)
+    let data = new FormData(form)
     const imageFile = data.get("image") as File;
 
     let imagePath = "";
@@ -86,6 +87,7 @@ const PostCard = ({ post }: { post: any }) => {
 
       if (res.ok) {
         setCommentContent("");
+        form.reset()
         fetchComments(); // Refresh comments
       } else {
         console.error("Failed to create comment");
@@ -126,6 +128,11 @@ const PostCard = ({ post }: { post: any }) => {
             <input type="file" name="image" accept="image/*" />
             <button type="submit">Comment</button>
           </form>
+          {message && (
+            <div id="message" className={isError ? "error" : "success"}>
+              {message}
+            </div>
+          )}
           {loadingComments ? (
             <p>Loading comments...</p>
           ) : (
