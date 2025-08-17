@@ -8,7 +8,7 @@ import { API_BASE_URL, getImageUrl } from "@/utils/api";
 
 import { Comment, CommentCard } from "./components/Comment";
 
-const PostCard = ({ post }: { post: any }) => {
+export const PostCard = ({ post }: { post: any }) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);

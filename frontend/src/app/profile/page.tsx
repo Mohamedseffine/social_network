@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "../../utils/api";
+import { PostCard } from "../page";
 
 const ProfilePage = () => {
   const { user, isLoading } = useAuth();
@@ -159,19 +160,7 @@ const ProfilePage = () => {
           <div className="post-grid">
             {posts && posts.length > 0 ? (
               posts.map((post) => (
-                <div key={post.id} className="post-grid-item">
-                  {post.image ? (
-                    <img src={getImageUrl(post.image)} alt="Post" />
-                  ) : (
-                    <div className="post-text-preview styled">{post.content}</div>
-                  )}
-                  <div className="post-grid-overlay">
-                    <div className="overlay-info">
-                      <span>{post.privacy}</span>
-                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                </div>
+               <PostCard key={`${post.privacy}-${post.id}`} post={post}  />
               ))
             ) : (
               <p>No posts to display.</p>
