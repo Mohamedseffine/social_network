@@ -260,7 +260,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
     const form = e.currentTarget;
     const formData = new FormData(form);
     const content = formData.get("content");
-    const imageFile = formData.get("content") as File;
+    const imageFile = formData.get("image") as File;
     let imagePath = "";
     if (imageFile && imageFile.size > 0) {
       try {
@@ -271,6 +271,8 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         });
         if (uploadRes.ok) {
           imagePath = (await uploadRes.json()).path;
+          console.log(imagePath);
+          
         } else {
           alert(`Image upload failed: ${await uploadRes.text()}`);
           return;

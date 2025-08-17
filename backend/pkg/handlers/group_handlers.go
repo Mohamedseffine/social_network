@@ -683,6 +683,7 @@ func (app *App) CreateGroupPostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+	log.Println(req.Image)
 
 	stmt, err := app.DB.Prepare("INSERT INTO group_posts (group_id, user_id, content, image) VALUES (?, ?, ?, ?)")
 	if err != nil {
