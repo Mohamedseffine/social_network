@@ -321,6 +321,7 @@ export default function Home() {
       nickname: formData.get("nickname"),
       about_me: formData.get("about_me"),
     };
+    
     try {
       const res = await fetch(`${API_BASE_URL}/register`, {
         method: "POST",

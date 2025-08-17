@@ -310,6 +310,14 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
       setError("Event time is required.");
       return;
     }
+    function isValidDate(dateString: string) {
+      return !isNaN(Date.parse(dateString));
+    }
+    if (!isValidDate(event_time_str)) {
+      alert("invalid date value")
+      return
+    }
+
 
     const event_time = new Date(event_time_str).toISOString();
 
