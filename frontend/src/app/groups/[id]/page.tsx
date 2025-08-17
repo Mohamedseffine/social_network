@@ -73,18 +73,47 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
 
   const [comments, setComments] = useState<{ [key: number]: any[] }>({});
   const [visibleComments, setVisibleComments] = useState<number | null>(null);
-
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+  const showMessage = (msg: string, error: boolean = false) => {
+    setMessage(msg);
+    setIsError(error);
+    setTimeout(() => {
+      setMessage("");
+    }, 3000);
+  };
   const handleCreateComment = async (e: React.FormEvent<HTMLFormElement>, postId: number) => {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
     const content = formData.get("content") as string;
+    const imageFile = formData.get("image") as File;
+
+    let imagePath = "";
+    if (imageFile && imageFile.size > 0) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("image", imageFile);
+        const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+          method: "POST", body: uploadFormData, credentials: "include",
+        });
+        if (uploadRes.ok) {
+          imagePath = (await uploadRes.json()).path;
+        } else {
+          showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
+          return;
+        }
+      } catch (err: any) {
+        showMessage(`Image upload failed: ${err.message}`, true);
+        return;
+      }
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/group-posts/${postId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content, image : imagePath }),
         credentials: "include",
       });
       if (res.ok) {
@@ -272,7 +301,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         if (uploadRes.ok) {
           imagePath = (await uploadRes.json()).path;
           console.log(imagePath);
-          
+
         } else {
           alert(`Image upload failed: ${await uploadRes.text()}`);
           return;
@@ -417,8 +446,14 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
                       <div className="comments-section">
                         <form onSubmit={(e) => handleCreateComment(e, post.id)} className="comment-form">
                           <textarea name="content" placeholder="Write a comment..." required />
+                          <input type="file" name="image" accept="image/*" />
                           <button type="submit">Comment</button>
                         </form>
+                        {message && (
+                          <div id="message" className={isError ? "error" : "success"}>
+                            {message}
+                          </div>
+                        )}
                         <div className="comments-list">
                           {comments[post.id] ? (
                             comments[post.id].map((comment: Comment) => (

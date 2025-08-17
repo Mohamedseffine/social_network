@@ -772,7 +772,8 @@ func (app *App) GetGroupPostsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateGroupPostCommentRequest struct {
-	Content string `json:"content"`
+	Content  string `json:"content"`
+	ImageUrl string `json:"image"`
 }
 
 func (app *App) CreateGroupPostCommentHandler(w http.ResponseWriter, r *http.Request) {
@@ -825,14 +826,14 @@ func (app *App) CreateGroupPostCommentHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	stmt, err := app.DB.Prepare("INSERT INTO group_post_comments (post_id, user_id, content) VALUES (?, ?, ?)")
+	stmt, err := app.DB.Prepare("INSERT INTO group_post_comments (post_id, user_id, content, image_url) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
 		return
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(postID, userID, req.Content)
+	_, err = stmt.Exec(postID, userID, req.Content, req.ImageUrl)
 	if err != nil {
 		http.Error(w, "Failed to create comment", http.StatusInternalServerError)
 		return
@@ -882,7 +883,7 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	query := `
-		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.first_name, u.last_name, u.avatar
+		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, c.image_url, u.first_name, u.last_name, u.avatar
 		FROM group_post_comments c
 		JOIN users u ON c.user_id = u.id
 		WHERE c.post_id = ?
@@ -898,8 +899,8 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 	var comments []models.GroupPostComment
 	for rows.Next() {
 		var comment models.GroupPostComment
-		var avatar sql.NullString
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
+		var avatar, image sql.NullString
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &image, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
 			http.Error(w, "Failed to scan comment", http.StatusInternalServerError)
 			return
 		}
@@ -907,6 +908,11 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 			comment.AuthorAvatar = avatar.String
 		} else {
 			comment.AuthorAvatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
+		}
+		if image.Valid && image.String != "" {
+			comment.ImageUrl = image.String
+		} else {
+			comment.ImageUrl = ""
 		}
 		comments = append(comments, comment)
 	}
