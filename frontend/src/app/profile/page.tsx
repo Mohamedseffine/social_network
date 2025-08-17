@@ -16,7 +16,7 @@ const ProfilePage = () => {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [activePopover, setActivePopover] = useState<'followers' | 'following' | null>(null);
   const [isPrivate, setIsPrivate] = useState<boolean>()
-  // console.log(user.profile_is_public);
+  
   
   useEffect(() => {
     if (isLoading) return; // Wait until session check is complete
