@@ -120,6 +120,7 @@ func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if aboutMe.Valid {
 		user.AboutMe = aboutMe.String
 	}
+	 	user.Password = ""
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
