@@ -31,7 +31,17 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if req.Avatar == "" {
 		req.Avatar = "/uploads/default-avatar-icon-of-social-media-user-vector.jpg"
 	}
-
+	bDate, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Failed to parse birthdate", http.StatusInternalServerError)
+		return
+	}
+	
+	if bDate.After(time.Now().Add(-18 * 365 * 24 * time.Hour)) {
+		http.Error(w, "You must be at least 18 years old to register", http.StatusBadRequest)
+		return
+	}
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
@@ -120,7 +130,7 @@ func (app *App) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if aboutMe.Valid {
 		user.AboutMe = aboutMe.String
 	}
-	 	user.Password = ""
+	user.Password = ""
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
