@@ -33,13 +33,12 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	bDate, err := time.Parse("2006-01-02", req.DateOfBirth)
 	if err != nil {
-		log.Println(err)
 		http.Error(w, "Failed to parse birthdate", http.StatusInternalServerError)
 		return
 	}
-	
-	if bDate.After(time.Now().Add(-18 * 365 * 24 * time.Hour)) {
-		http.Error(w, "You must be at least 18 years old to register", http.StatusBadRequest)
+
+	if bDate.After(time.Now().Add(-18*365*24*time.Hour)) || bDate.Before(time.Now().Add(-120*365*24*time.Hour)) {
+		http.Error(w, "You must be at least 18 years old and you cant be older than 120 years old to register", http.StatusBadRequest)
 		return
 	}
 	hashedPassword, err := auth.HashPassword(req.Password)
