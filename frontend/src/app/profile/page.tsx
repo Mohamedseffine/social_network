@@ -82,8 +82,18 @@ const ProfilePage = () => {
         <img src={getImageUrl(user.avatar)} alt="Avatar" className="profile-avatar" />
         <div className="profile-info">
           <div className="profile-title">
-            <h1>{user.nickname || `${user.first_name} ${user.last_name}`}</h1>
-            <button onClick={handleTogglePrivacy} className="privacy-toggle-btn">
+           <h1>
+              {user.nickname ? (
+                <>
+                  {user.nickname}
+                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: '0.5rem' }}>
+                    ({user.first_name} {user.last_name})
+                  </span>
+                </>
+              ) : (
+                `${user.first_name} ${user.last_name}`
+              )}
+            </h1>            <button onClick={handleTogglePrivacy} className="privacy-toggle-btn">
               Make {user.profile_is_public ? "Private" : "Public"}
             </button>
           </div>
