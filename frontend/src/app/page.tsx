@@ -13,6 +13,15 @@ const PostCard = ({ post }: { post: any }) => {
   const [showComments, setShowComments] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentContent, setCommentContent] = useState("");
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+   const showMessage = (msg: string, error: boolean = false) => {
+    setMessage(msg);
+    setIsError(error);
+    setTimeout(() => {
+      setMessage("");
+    }, 3000);
+  };
 
   const fetchComments = async () => {
     if (loadingComments) return;
@@ -43,12 +52,35 @@ const PostCard = ({ post }: { post: any }) => {
   const handleCreateComment = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!commentContent.trim()) return;
+    let data = new FormData(e.currentTarget)
+    const imageFile = data.get("image") as File;
+
+    let imagePath = "";
+    if (imageFile && imageFile.size > 0) {
+      try {
+        const uploadFormData = new FormData();
+        uploadFormData.append("image", imageFile);
+        const uploadRes = await fetch(`${API_BASE_URL}/upload`, {
+          method: "POST", body: uploadFormData, credentials: "include",
+        });
+        if (uploadRes.ok) {
+          imagePath = (await uploadRes.json()).path;
+        } else {
+          showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
+          return;
+        }
+      } catch (err: any) {
+        showMessage(`Image upload failed: ${err.message}`, true);
+        return;
+      }
+    }
+
 
     try {
       const res = await fetch(`${API_BASE_URL}/posts/${post.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: commentContent }),
+        body: JSON.stringify({ content: commentContent, image: imagePath }),
         credentials: "include",
       });
 
@@ -91,6 +123,7 @@ const PostCard = ({ post }: { post: any }) => {
               placeholder="Write a comment..."
               required
             />
+            <input type="file" name="image" accept="image/*" />
             <button type="submit">Comment</button>
           </form>
           {loadingComments ? (
@@ -270,7 +303,7 @@ export default function Home() {
         return;
       }
     }
-    
+
     const registrationData = {
       first_name: formData.get("first_name"),
       last_name: formData.get("last_name"),
@@ -334,54 +367,54 @@ export default function Home() {
             <div className="feed-and-posts">
               <div className="create-post card">
                 <h3>Create a Post</h3>
-              <form onSubmit={handleCreatePost}>
-                <textarea name="content" placeholder="What's on your mind?" required></textarea>
-                <input type="file" name="image" accept="image/*" />
-                <div className="privacy-options">
-                  <label htmlFor="privacy">Privacy:</label>
-                  <select name="privacy" value={postPrivacy} onChange={(e) => setPostPrivacy(e.target.value)}>
-                    <option value="public">Public</option>
-                    <option value="almost private">Followers Only</option>
-                    <option value="private">Specific Followers</option>
-                  </select>
-                </div>
-
-                {postPrivacy === 'private' && (
-                  <div className="followers-selection">
-                    <h4>Select followers who can see this post:</h4>
-                    <div className="followers-list-container">
-                      {followers.length > 0 ? (
-                        followers.map(follower => (
-                          <div key={follower.id} className="follower-item">
-                            <input
-                              type="checkbox"
-                              id={`follower-${follower.id}`}
-                              value={follower.id}
-                              onChange={handleFollowerSelection}
-                              checked={selectedFollowers.includes(follower.id)}
-                            />
-                            <label htmlFor={`follower-${follower.id}`}>{follower.first_name} {follower.last_name}</label>
-                          </div>
-                        ))
-                      ) : (
-                        <p>You have no followers to select.</p>
-                      )}
-                    </div>
+                <form onSubmit={handleCreatePost}>
+                  <textarea name="content" placeholder="What's on your mind?" required></textarea>
+                  <input type="file" name="image" accept="image/*" />
+                  <div className="privacy-options">
+                    <label htmlFor="privacy">Privacy:</label>
+                    <select name="privacy" value={postPrivacy} onChange={(e) => setPostPrivacy(e.target.value)}>
+                      <option value="public">Public</option>
+                      <option value="almost private">Followers Only</option>
+                      <option value="private">Specific Followers</option>
+                    </select>
                   </div>
-                )}
 
-                <button type="submit">Post</button>
-              </form>
-            </div>
-            <div className="posts-list">
+                  {postPrivacy === 'private' && (
+                    <div className="followers-selection">
+                      <h4>Select followers who can see this post:</h4>
+                      <div className="followers-list-container">
+                        {followers.length > 0 ? (
+                          followers.map(follower => (
+                            <div key={follower.id} className="follower-item">
+                              <input
+                                type="checkbox"
+                                id={`follower-${follower.id}`}
+                                value={follower.id}
+                                onChange={handleFollowerSelection}
+                                checked={selectedFollowers.includes(follower.id)}
+                              />
+                              <label htmlFor={`follower-${follower.id}`}>{follower.first_name} {follower.last_name}</label>
+                            </div>
+                          ))
+                        ) : (
+                          <p>You have no followers to select.</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <button type="submit">Post</button>
+                </form>
+              </div>
+              <div className="posts-list">
                 {posts.map(post => <PostCard key={`${post.privacy}-${post.id}`} post={post} />)}
-            </div>
-            {loadingFeed && <div>Loading more posts...</div>}
-            {!loadingFeed && hasMorePosts && (
+              </div>
+              {loadingFeed && <div>Loading more posts...</div>}
+              {!loadingFeed && hasMorePosts && (
                 <button onClick={() => fetchFeedPosts()} className="load-more-btn">Load More</button>
-            )}
-            {!loadingFeed && !hasMorePosts && posts.length === 0 && <p>No posts in your feed yet. Follow some people or join some groups!</p>}
-            {!loadingFeed && !hasMorePosts && posts.length > 0 && <p>You've reached the end of the feed.</p>}
+              )}
+              {!loadingFeed && !hasMorePosts && posts.length === 0 && <p>No posts in your feed yet. Follow some people or join some groups!</p>}
+              {!loadingFeed && !hasMorePosts && posts.length > 0 && <p>You've reached the end of the feed.</p>}
             </div>
             <div className="sidebar">
               <OnlineUsersList />

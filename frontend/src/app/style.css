@@ -379,6 +379,12 @@ button:disabled {
   margin-top: 1rem;
 }
 
+.comment-image{
+  max-width: 40%;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+
 /* Posts, Groups, Notifications List Items */
 .post, .group-item, .notification-item, .event {
   background: var(--surface-color);
@@ -436,6 +442,7 @@ button:disabled {
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem 0;
+  border: black 1px;
   border-bottom: 1px solid var(--border-color);
 }
 .comment:last-child {

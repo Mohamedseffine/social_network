@@ -29,7 +29,6 @@ func (app *App) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-
 	tx, err := app.DB.Begin()
 	if err != nil {
 		http.Error(w, "Failed to start transaction", http.StatusInternalServerError)
@@ -202,7 +201,8 @@ func (app *App) CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var payload struct {
-		Content string `json:"content"`
+		Content  string `json:"content"`
+		ImageUrl string `json:"image"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -215,14 +215,14 @@ func (app *App) CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stmt, err := app.DB.Prepare("INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)")
+	stmt, err := app.DB.Prepare("INSERT INTO comments (post_id, user_id, content, image_url) VALUES (?, ?, ?,?)")
 	if err != nil {
 		http.Error(w, "Failed to prepare comment statement", http.StatusInternalServerError)
 		return
 	}
 	defer stmt.Close()
 
-	if _, err := stmt.Exec(postID, currentUserID, payload.Content); err != nil {
+	if _, err := stmt.Exec(postID, currentUserID, payload.Content, payload.ImageUrl); err != nil {
 		http.Error(w, "Failed to create comment", http.StatusInternalServerError)
 		return
 	}
@@ -246,7 +246,7 @@ func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	query := `
-		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, u.first_name, u.last_name, u.avatar
+		SELECT c.id, c.post_id, c.user_id, c.content, c.created_at, c.image_url, u.first_name, u.last_name, u.avatar
 		FROM comments c
 		JOIN users u ON c.user_id = u.id
 		WHERE c.post_id = ?
@@ -264,7 +264,7 @@ func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var comment models.Comment
 		var avatar sql.NullString
-		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
+		if err := rows.Scan(&comment.ID, &comment.PostID, &comment.UserID, &comment.Content, &comment.CreatedAt, &comment.ImageUrl, &comment.AuthorFirstName, &comment.AuthorLastName, &avatar); err != nil {
 			http.Error(w, "Failed to scan comment", http.StatusInternalServerError)
 			return
 		}

@@ -9,6 +9,7 @@ export interface Comment {
   author_last_name: string;
   author_avatar: string;
   content: string;
+  image : string;
   created_at: string;
 }
 
@@ -21,8 +22,11 @@ export const CommentCard = ({ comment }: { comment: Comment }) => {
           <span className="comment-author-name">{comment.author_first_name} {comment.author_last_name}</span>
         </Link>
       </div>
-      <p className="comment-content">{comment.content}</p>
       <small className="comment-date">{new Date(comment.created_at).toLocaleString()}</small>
+      <p className="comment-content">{comment.content}</p>
+      {comment.image && (
+        <img src={getImageUrl(comment.image)} alt="comment image" className="comment-image" />
+      )}
     </div>
   );
 };
