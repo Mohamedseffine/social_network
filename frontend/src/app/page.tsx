@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "@/utils/api";
-import OnlineUsersList from "./components/OnlineUsersList";
+
 
 import { Comment, CommentCard } from "./components/Comment";
 
@@ -415,9 +415,6 @@ export default function Home() {
               )}
               {!loadingFeed && !hasMorePosts && posts.length === 0 && <p>No posts in your feed yet. Follow some people or join some groups!</p>}
               {!loadingFeed && !hasMorePosts && posts.length > 0 && <p>You've reached the end of the feed.</p>}
-            </div>
-            <div className="sidebar">
-              <OnlineUsersList />
             </div>
           </div>
         ) : (
