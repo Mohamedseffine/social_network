@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "../../../context/AuthContext";
 import { usePopup } from "../../../context/PopupContext";
 import { API_BASE_URL, getImageUrl } from "../../../utils/api";
+import { PostCard } from "@/app/page";
 
 const UserProfilePage = ({ params }: { params: { id: string } }) => {
   const { user: currentUser } = useAuth();
@@ -178,11 +179,7 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
         {profileUser.email ? (
             posts.length > 0 ? (
             posts.map((post) => (
-                <div key={post.id} className="post">
-                <p>{post.content}</p>
-                {post.image && <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />}
-                <small>{new Date(post.created_at).toLocaleString()}</small>
-                </div>
+               <PostCard key={`${post.privacy}-${post.id}`} post={post} />
             ))
             ) : (
             <p>This user has no posts.</p>
