@@ -105,11 +105,11 @@ export const PostCard = ({ post }: { post: any }) => {
           <span>{post.author_first_name} {post.author_last_name}</span>
         </Link>
       </div>
+      <small>{new Date(post.created_at).toLocaleString()}</small>
       <p>{post.content}</p>
       {post.image && (
         <img src={getImageUrl(post.image)} alt="Post image" className="post-image" />
       )}
-      <small>{new Date(post.created_at).toLocaleString()}</small>
       <div className="post-actions">
         <button onClick={handleToggleComments} className="toggle-comments-btn">
           {showComments ? "Hide" : "View"} Comments
