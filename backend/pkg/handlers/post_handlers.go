@@ -129,12 +129,11 @@ func (app *App) GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
 	args := []interface{}{profileUserID}
 
 	if !isOwner {
-		privacyClause := " AND (p.privacy = 'public'"
+		privacyClause := ""
+		log.Println(isFollowing)
 		if isFollowing {
-			privacyClause += " OR p.privacy = 'almost private'"
+			privacyClause += " AND (p.privacy = 'public' OR p.privacy = 'almost private' OR (p.privacy = 'private' AND EXISTS (SELECT 1 FROM post_viewers WHERE post_id = p.id AND viewer_id = ?)))"
 		}
-		// Check for private posts the user has access to
-		privacyClause += " OR (p.privacy = 'private' AND EXISTS (SELECT 1 FROM post_viewers WHERE post_id = p.id AND viewer_id = ?)))"
 		query += privacyClause
 		args = append(args, requestingUserID)
 	}

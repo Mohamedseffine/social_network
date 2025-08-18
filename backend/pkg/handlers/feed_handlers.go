@@ -33,9 +33,9 @@ func (app *App) GetFeedHandler(w http.ResponseWriter, r *http.Request) {
 				-- User's own posts
 				p.user_id = ?
 				-- All public posts from all users
-				OR p.privacy = 'public'
+				OR p.privacy = 'public' AND p.user_id IN (SELECT id FROM users  WHERE profile_is_public = 1 )
 				-- Almost private posts from followed users
-				OR (p.user_id IN (SELECT followed_id FROM followers WHERE follower_id = ? AND status = 'accepted') AND p.privacy = 'almost private')
+				OR (p.user_id IN (SELECT followed_id FROM followers WHERE follower_id = ? AND status = 'accepted') AND (p.privacy = 'almost private' OR p.privacy = 'public' ))
 				-- Private posts user has access to
 				OR (p.privacy = 'private' AND EXISTS (SELECT 1 FROM post_viewers pv WHERE pv.post_id = p.id AND pv.viewer_id = ?))
 			)
