@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import { API_BASE_URL } from '../utils/api';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: any | null;
@@ -30,7 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
   const worker = useRef<SharedWorker | null>(null);
   const [notificationTrigger, setNotificationTrigger] = useState(0);
-
+  const router = useRouter()
   const triggerNotificationRefresh = () => {
     setNotificationTrigger((prev) => prev + 1);
   };
@@ -42,6 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (res.ok) {
         const data = await res.json();
         setUnreadNotifications(data.unread_count);
+      }if (res.status == 401){
+        router.push("/")
       }
     } catch (err) {
       console.error("Failed to fetch unread notifications", err);
@@ -55,6 +58,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (res.ok) {
         const data = await res.json();
         setUnreadMessages(data.unread_count);
+      }else if (res.status == 401){
+        router.push("/")
       }
     } catch (err) {
       console.error("Failed to fetch unread message count", err);
@@ -78,6 +83,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setUser(userData);
         } else {
           setUser(null);
+        }
+        if (res.status == 401){
+                    router.push("/")
+
         }
       } catch (err) {
         console.error("Session check failed", err);
