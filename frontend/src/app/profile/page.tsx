@@ -80,6 +80,10 @@ const ProfilePage = () => {
         setIsPrivate(!isPrivate)
       } else {
         setError(`Failed to update privacy: ${await res.text()}`);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
