@@ -9,12 +9,7 @@ import (
 	"strconv"
 )
 
-type Conversation struct {
-	ID           string `json:"id"` // "user-123" or "group-456"
-	Name         string `json:"name"`
-	Type         string `json:"type"` // "user" or "group"
-	UnreadCount  int    `json:"unread_count"`
-}
+
 
 // GetConversationsHandler will fetch all conversations for the current user
 func (app *App) GetConversationsHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,8 +19,7 @@ func (app *App) GetConversationsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	conversations := make([]Conversation, 0)
-	existingUsers := make(map[int64]bool)
+
 
 	// Get group conversations
 	rows, err := app.DB.Query(`
