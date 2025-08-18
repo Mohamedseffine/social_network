@@ -30,7 +30,7 @@ func main() {
 	// Auth routes
 	apiRouter.HandleFunc("/register", app.RegisterHandler).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/login", app.LoginHandler).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS")//deplacer ici pour marche
+	apiRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS") //deplacer ici pour marche
 
 	// Authenticated routes
 	authRouter := apiRouter.PathPrefix("/").Subrouter()
@@ -66,6 +66,7 @@ func main() {
 	authRouter.HandleFunc("/groups/{id}/posts", app.GetGroupPostsHandler).Methods("GET", "OPTIONS")
 	authRouter.HandleFunc("/group-posts/{id}/comments", app.CreateGroupPostCommentHandler).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/group-posts/{id}/comments", app.GetGroupPostCommentsHandler).Methods("GET", "OPTIONS")
+	authRouter.HandleFunc("/search_groups", app.SearchGroupsHandler).Methods("GET", "OPTIONS")
 
 	// Event routes
 	authRouter.HandleFunc("/groups/{id}/events", app.CreateEventHandler).Methods("POST", "OPTIONS")

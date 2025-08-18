@@ -927,3 +927,50 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 		http.Error(w, "Failed to encode comments", http.StatusInternalServerError)
 	}
 }
+
+func (app *App) SearchGroupsHandler(w http.ResponseWriter, r *http.Request) {
+	userID := ForContext(r.Context())
+	if userID == 0 {
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	queryValues := r.URL.Query()
+	searchQuery := queryValues.Get("q")
+	if searchQuery == "" {
+		http.Error(w, "the search value is empty", http.StatusBadRequest)
+		return
+	}
+	stm, err := app.DB.Prepare(`SELECT id, title, description FROM groups WHERE title LIKE ? OR description LIKE ? `)
+	if err != nil {
+		log.Println(err, "1")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	rows, err := stm.Query("%"+searchQuery+"%", "%"+searchQuery+"%")
+	if err != nil {
+		log.Println(err, "2")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var result []models.Group
+	for rows.Next() {
+		var group models.Group
+		err := rows.Scan(&group.ID, &group.Title, &group.Description)
+		if err != nil {
+			log.Println(err, "3")
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		result = append(result, group)
+	}
+	log.Println("res", result)
+	err = json.NewEncoder(w).Encode(map[string]any{
+		"groups": result,
+	})
+	if err != nil {
+		log.Println(err, "4")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}

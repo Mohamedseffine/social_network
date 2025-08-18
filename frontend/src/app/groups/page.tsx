@@ -9,6 +9,9 @@ const GroupsPage = () => {
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
 
   const fetchGroups = async () => {
@@ -29,6 +32,33 @@ const GroupsPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/search_groups?q=${searchTerm}`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSearchResults(data.groups?data.groups:[]);
+        } else {
+          console.error("Failed to search users");
+        }
+      } catch (err) {
+        console.error("User search error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500); // 500ms delay
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   useEffect(() => {
     fetchGroups();
@@ -83,6 +113,28 @@ const GroupsPage = () => {
           ></textarea>
           <button type="submit">Create Group</button>
         </form>
+      </div>
+      <div>
+        <h3>Search For A Group</h3>
+              <input
+                type="text"
+                placeholder="Search by name or nickname..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {isSearching && <div>Searching...</div>}
+              <div className="search-results">
+                { searchResults.length>0 && searchResults?.map((group) => (
+                  <div key={group.id} className="search-result-item">
+                    <span><strong>title:</strong>{group.title+"  "}</span>
+                    <span><strong>discreption:</strong>{group.description}</span>
+                    <Link href={`/groups/${group.id}`} > see group</Link>
+                  </div>
+                ))}
+                {searchResults.length===0 && !isSearching  && searchTerm&&(
+                  <div>can't find any results</div>
+                )}
+                </div>
       </div>
       <div className="groups-list">
         <h2>All Groups</h2>
