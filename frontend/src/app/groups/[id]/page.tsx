@@ -109,6 +109,9 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
           imagePath = (await uploadRes.json()).path;
         } else {
           showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
+          if (uploadRes.status == 401){
+                      router.push("/")
+          }
           return;
         }
       } catch (err: any) {
@@ -129,6 +132,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         fetchComments(postId); // Refetch comments to show the new one
       } else {
         setError(`Failed to create comment: ${await res.text()}`);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
@@ -145,6 +152,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         setComments(prev => ({ ...prev, [postId]: data || [] }));
       } else {
         console.error("Failed to fetch comments");
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err) {
       console.error("Error fetching comments", err);
@@ -181,6 +192,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         }
       } else {
         setError(`Failed to RSVP: ${await res.text()}`);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
