@@ -1,38 +1,13 @@
-# Use the official Golang image to create a build artifact.
-# This is known as a multi-stage build.
-FROM golang:1.23-alpine as builder
+FROM golang:1.24-alpine
 
-# Set the Current Working Directory inside the container
 WORKDIR /app
 
-# Copy go mod and sum files
-COPY go.mod go.sum ./
+RUN apk add --no-cache bash gcc musl-dev
 
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed.
-RUN go mod download
-
-# Copy the source code
 COPY . .
 
-# Build the Go app
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN go build -o server server.go
 
-# Start a new stage from scratch
-FROM alpine:latest
-
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-# Copy the Pre-built binary file from the previous stage
-COPY --from=builder /app/main .
-
-# Copy migrations
-COPY --from=builder /app/pkg/db/migrations ./pkg/db/migrations
-
-
-# Expose port 8080 to the outside world
 EXPOSE 8080
 
-# Command to run the executable
-CMD ["./main"]
+CMD ["./server"]

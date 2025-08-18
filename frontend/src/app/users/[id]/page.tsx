@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "../../../context/AuthContext";
 import { usePopup } from "../../../context/PopupContext";
 import { API_BASE_URL, getImageUrl } from "../../../utils/api";
-import { PostCard } from "@/app/page";
+import  PostCard  from "../../postcard";
 
 const UserProfilePage = ({ params }: { params: { id: string } }) => {
   const { user: currentUser } = useAuth();

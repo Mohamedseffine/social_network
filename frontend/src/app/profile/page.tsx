@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "../../utils/api";
-import { PostCard } from "../page";
+import  PostCard  from "../postcard";
 
 const ProfilePage = () => {
   const { user, isLoading } = useAuth();
