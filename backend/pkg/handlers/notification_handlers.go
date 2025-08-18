@@ -8,7 +8,7 @@ import (
 	"social-network/backend/pkg/models"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	"social-network/backend/pkg/router"
 )
 
 func (app *App) createNotification(userID int64, notifType string, message string, fromUserID int64, relatedID int64) {
@@ -94,7 +94,7 @@ func (app *App) MarkNotificationAsReadHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	vars := mux.Vars(r)
+	vars := router.Vars(r)
 	notificationIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Notification ID is missing", http.StatusBadRequest)
@@ -142,7 +142,7 @@ func (app *App) DeleteNotificationHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vars := mux.Vars(r)
+	vars := router.Vars(r)
 	notificationIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Notification ID is missing", http.StatusBadRequest)
