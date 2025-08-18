@@ -25,6 +25,10 @@ const GroupsPage = () => {
       } else {
         const errorText = await res.text();
         setError(`Failed to fetch groups: ${errorText}`);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
@@ -50,6 +54,10 @@ const GroupsPage = () => {
           setSearchResults(data.groups?data.groups:[]);
         } else {
           console.error("Failed to search users");
+          if (res.status == 401){
+                      router.push("/")
+
+          }
         }
       } catch (err) {
         console.error("User search error:", err);
@@ -85,6 +93,10 @@ const GroupsPage = () => {
       } else {
         const errorText = await res.text();
         setError(`Failed to create group: ${errorText}`);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
