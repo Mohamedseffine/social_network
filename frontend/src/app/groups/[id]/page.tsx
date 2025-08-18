@@ -1,5 +1,5 @@
 "use client";
-
+import "../../style.css"
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL, getImageUrl } from "../../../utils/api";
