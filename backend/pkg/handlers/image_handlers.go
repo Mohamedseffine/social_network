@@ -39,10 +39,7 @@ func (app *App) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	defer dst.Close()
 
 	// Copy the uploaded file to the destination file
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "Failed to save the file", http.StatusInternalServerError)
-		return
-	}
+	
 
 	// Return the file path
 	filePath := fmt.Sprintf("/uploads/%s", filename)
