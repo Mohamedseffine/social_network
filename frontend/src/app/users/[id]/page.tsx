@@ -21,6 +21,8 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
   const [followStatus, setFollowStatus] = useState("");
   const router = useRouter();
   const { id } = params;
+    const {user} = useAuth()
+
 
   const fetchUserData = useCallback(async () => {
     setIsLoading(true);
@@ -128,9 +130,8 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
         return "Follow";
     }
   };
-
   return (
-    <div className="profile-container">
+  user != null &&( <div className="profile-container">
       <h1>{profileUser.nickname || `${profileUser.first_name} ${profileUser.last_name}`}</h1>
       {followStatus !== "is_self" && (
         <button onClick={handleFollowAction} disabled={isLoading}>
@@ -207,7 +208,7 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
             <p>This profile is private. Follow them to see their posts.</p>
         )}
       </div>
-    </div>
+    </div>)
   );
 };
 

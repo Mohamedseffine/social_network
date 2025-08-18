@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { API_BASE_URL } from "../../utils/api";
+import { useAuth } from "@/context/AuthContext";
 
 const GroupsPage = () => {
   const [groups, setGroups] = useState<any[]>([]);
@@ -13,6 +14,7 @@ const GroupsPage = () => {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const router = useRouter();
+  const {user} = useAuth()
 
   const fetchGroups = async () => {
     try {
@@ -112,7 +114,7 @@ const GroupsPage = () => {
   }
 
   return (
-    <div className="groups-container">
+   user != null &&( <div className="groups-container">
       <h1>Groups</h1>
       <div className="create-group">
         <h2>Create a Group</h2>
@@ -163,7 +165,7 @@ const GroupsPage = () => {
           <p>No groups found.</p>
         )}
       </div>
-    </div>
+    </div>)
   );
 };
 

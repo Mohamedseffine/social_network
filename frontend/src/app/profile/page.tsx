@@ -96,7 +96,7 @@ const ProfilePage = () => {
   }
 
   return (
-    <div className="profile-container">
+   user != null &&( <div className="profile-container">
       <div className="profile-header">
         <img src={getImageUrl(user.avatar)} alt="Avatar" className="profile-avatar" />
         <div className="profile-info">
@@ -184,7 +184,7 @@ const ProfilePage = () => {
         )}
       </div>
 
-    </div>
+    </div>)
   );
 };
 

@@ -14,6 +14,7 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const { user: currentUser } = useAuth();
   const router = useRouter()
+  const {user} = useAuth()
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -58,7 +59,7 @@ const UsersPage = () => {
   }
 
   return (
-    <div className="users-container">
+   user != null && ( <div className="users-container">
       <h1>Find Users</h1>
       <div className="search-bar">
         <input
@@ -90,7 +91,7 @@ const UsersPage = () => {
           );
         })}
       </div>
-    </div>
+    </div>)
   );
 };
 

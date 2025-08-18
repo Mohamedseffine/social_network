@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { API_BASE_URL, getImageUrl } from "../../../utils/api";
 import { usePopup } from "../../../context/PopupContext";
 import { Comment, CommentCard } from "../../components/Comment";
+import { useAuth } from "@/context/AuthContext";
 
 const GroupPage = ({ params }: { params: { id: string } }) => {
   const { showPopup } = usePopup();
@@ -15,6 +16,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const router = useRouter();
+  const {user} = useAuth()
   const { id } = params;
 
   // State for create form toggle
@@ -425,7 +427,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
   const renderContent = () => {
     if (membershipStatus === 'accepted') {
       return (
-        <>
+     user != null &&   (<>
           <div className="creation-forms card">
             <div className="form-toggle">
               <button onClick={() => setFormType('post')} className={formType === 'post' ? 'active' : ''}>Create Post</button>
@@ -552,7 +554,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
               )}
             </div>
           </div>
-        </>
+        </>)
       );
     } else if (membershipStatus === 'pending') {
       return <div className="group-status-info">Your request to join this group is pending approval.</div>;
