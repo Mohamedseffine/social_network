@@ -42,6 +42,9 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
           const data = await res.json();
           setSearchResults(data);
         } else {
+          if (res.status == 401){
+                    router.push("/")
+          }
           console.error("Failed to search users");
         }
       } catch (err) {
@@ -60,11 +63,16 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         credentials: "include",
       });
       if (postsRes.ok) setPosts(await postsRes.json());
-
+      if (postsRes.status == 401){
+                  router.push("/")
+      }
       const eventsRes = await fetch(`${API_BASE_URL}/groups/${id}/events`, {
         credentials: "include",
       });
       if (eventsRes.ok) setEvents(await eventsRes.json());
+      if (eventsRes.status == 401){
+                  router.push("/")
+      }
     } catch (err) {
       console.error("Failed to fetch member content", err);
       setError("Failed to load group content.");
