@@ -101,6 +101,9 @@ const ChatPage = () => {
         ));
 
       } else {
+         if (res.status == 401){
+          router.push("/")
+         }
         console.error("Failed to fetch messages");
       }
     } catch (error) {
