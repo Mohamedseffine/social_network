@@ -10,7 +10,7 @@ import (
 
 	"social-network/backend/pkg/models"
 
-	"social-network/backend/pkg/router"
+	"github.com/gorilla/mux"
 )
 
 type CreateGroupRequest struct {
@@ -113,7 +113,7 @@ func (app *App) GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -150,7 +150,7 @@ func (app *App) GetGroupMembershipStatusHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -188,7 +188,7 @@ func (app *App) JoinGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -258,7 +258,7 @@ func (app *App) AcceptGroupRequestHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	memberIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Member ID is missing", http.StatusBadRequest)
@@ -337,7 +337,7 @@ func (app *App) DeclineGroupRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	memberIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Member ID is missing", http.StatusBadRequest)
@@ -423,7 +423,7 @@ func (app *App) InviteToGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -509,7 +509,7 @@ func (app *App) AcceptGroupInviteHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	inviteIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Invite ID is missing", http.StatusBadRequest)
@@ -576,7 +576,7 @@ func (app *App) DeclineGroupInviteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	inviteIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Invite ID is missing", http.StatusBadRequest)
@@ -648,7 +648,7 @@ func (app *App) CreateGroupPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -709,7 +709,7 @@ func (app *App) GetGroupPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -783,7 +783,7 @@ func (app *App) CreateGroupPostCommentHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	postIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Post ID is missing", http.StatusBadRequest)
@@ -850,7 +850,7 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	postIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Post ID is missing", http.StatusBadRequest)

@@ -10,7 +10,8 @@ import (
 	"time"
 
 	"social-network/backend/pkg/models"
-	"social-network/backend/pkg/router"
+
+	"github.com/gorilla/mux"
 )
 
 type CreateEventRequest struct {
@@ -26,7 +27,7 @@ func (app *App) CreateEventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -142,7 +143,7 @@ func (app *App) GetGroupEventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	groupIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
@@ -211,7 +212,7 @@ func (app *App) RespondToEventHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	eventIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Event ID is missing", http.StatusBadRequest)
@@ -307,7 +308,7 @@ func (app *App) GetEventAttendeesHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	eventIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Event ID is missing", http.StatusBadRequest)

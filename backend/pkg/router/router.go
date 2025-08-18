@@ -1,93 +1,82 @@
 package router
 
 import (
-	"context"
 	"net/http"
 	"strings"
 )
 
-// contextKey is a type for context keys.
-type contextKey string
-
-// paramsKey is the key for the path parameters in the context.
-const paramsKey = contextKey("params")
-
-// Vars returns the route variables for the current request, if any.
-func Vars(r *http.Request) map[string]string {
-	if rv := r.Context().Value(paramsKey); rv != nil {
-		return rv.(map[string]string)
-	}
-	return nil
-}
-
-// Route represents a route.
-type route struct {
-	method  string
-	path    []string
-	handler http.Handler
-}
-
-// Router is a simple HTTP router.
 type Router struct {
-	routes []*route
+	Routes        map[string]http.HandlerFunc
 }
 
-// NewRouter creates a new Router.
-func NewRouter() *Router {
-	return &Router{routes: []*route{}}
+
+
+func (router *Router) AddRoute(method string, path string, handler http.HandlerFunc) {
+	route := strings.ToLower(method + ":" + path)
+	router.Routes[route] = handler
 }
 
-// Handle adds a new route with a handler.
-func (r *Router) Handle(path string, handler http.Handler) *route {
-	pathParts := strings.Split(strings.Trim(path, "/"), "/")
-	route := &route{path: pathParts, handler: handler}
-	r.routes = append(r.routes, route)
-	return route
-}
-
-// HandleFunc adds a new route with a handler function.
-func (r *Router) HandleFunc(path string, handler http.HandlerFunc) *route {
-	return r.Handle(path, handler)
-}
-
-// Methods sets the HTTP methods for the route.
-func (ro *route) Methods(methods ...string) {
-	if len(methods) > 0 {
-		ro.method = methods[0]
+func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	frontEndPaths := map[string]bool{
+		"/register": true,
+		"/login":    true,
 	}
-}
 
-// ServeHTTP dispatches the request to the handler whose pattern matches the request URL.
-func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	reqPath := strings.Trim(req.URL.Path, "/")
-	reqPathParts := strings.Split(reqPath, "/")
+	// CORS headers
+	origin := r.Header.Get("Origin")
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	for _, route := range r.routes {
-		if route.method != "" && req.Method != route.method && req.Method != "OPTIONS" {
-			continue
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Check session
+	isValid := false
+	session, err := r.Cookie("session_token")
+	if err == nil && session != nil {
+		isValid = router.usersSessions.IsValidSession(session.Value)
+	}
+
+	// If the user is logged in and tries to go to login or register -> redirect to home
+	if frontEndPaths[r.URL.Path] && r.Method == "GET" {
+		if isValid {
+			http.Redirect(w, r, "/", http.StatusFound)
+		} else {
+			http.ServeFile(w, r, "../frontend/index.html")
 		}
+		return
+	}
 
-		if len(route.path) != len(reqPathParts) {
-			continue
-		}
-
-		params := make(map[string]string)
-		match := true
-		for i, part := range route.path {
-			if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") {
-				params[part[1:len(part)-1]] = reqPathParts[i]
-			} else if part != reqPathParts[i] {
-				match = false
-				break
-			}
-		}
-
-		if match {
-			ctx := context.WithValue(req.Context(), paramsKey, params)
-			route.handler.ServeHTTP(w, req.WithContext(ctx))
+	// If user is not logged in and tries to go to home
+	if r.Method == "GET" && (r.URL.Path == "/" || r.URL.Path == "/index.html") {
+		if !isValid {
+			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
+		http.ServeFile(w, r, "../frontend/index.html")
+		return
 	}
 
-	http.NotFound(w, req)
+	// Serve static files
+	if r.Method == "GET" {
+		if strings.HasSuffix(r.URL.Path, ".css") || strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".png") {
+			http.ServeFile(w, r, "../frontend"+r.URL.Path)
+			return
+		}
+		// http.ServeFile(w, r, "../front/index.html")
+		// return
+	}
+
+	// Handle registered routes
+	route := strings.ToLower(r.Method + ":" + r.URL.Path)
+	if handler, ok := router.Routes[route]; ok {
+		handler(w, r)
+		return
+	}
+
+	// Not found
+	http.ServeFile(w, r, "../frontend/index.html")
 }

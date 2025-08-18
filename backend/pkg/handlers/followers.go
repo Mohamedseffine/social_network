@@ -9,7 +9,7 @@ import (
 	"social-network/backend/pkg/models"
 	"strconv"
 
-	"social-network/backend/pkg/router"
+	"github.com/gorilla/mux"
 )
 
 func (app *App) FollowUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,7 +19,7 @@ func (app *App) FollowUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	followedIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
@@ -106,7 +106,7 @@ func (app *App) UnfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	followedIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
@@ -154,7 +154,7 @@ func (app *App) AcceptFollowRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	requestIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Request ID not provided", http.StatusBadRequest)
@@ -218,7 +218,7 @@ func (app *App) DeclineFollowRequestHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	requestIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "Request ID not provided", http.StatusBadRequest)
@@ -267,7 +267,7 @@ func (app *App) DeclineFollowRequestHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *App) GetFollowersHandler(w http.ResponseWriter, r *http.Request) {
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	userIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
@@ -307,7 +307,7 @@ func (app *App) GetFollowersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetFollowingHandler(w http.ResponseWriter, r *http.Request) {
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	userIDStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)

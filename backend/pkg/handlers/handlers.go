@@ -7,8 +7,9 @@ import (
 	"social-network/backend/pkg/models"
 	"strconv"
 
-	"social-network/backend/pkg/router"
 	"social-network/backend/pkg/websockets"
+
+	"github.com/gorilla/mux"
 )
 
 type App struct {
@@ -17,7 +18,7 @@ type App struct {
 }
 
 func (app *App) GetUserHandler(w http.ResponseWriter, r *http.Request) {
-	vars := router.Vars(r)
+	vars := mux.Vars(r)
 	idStr, ok := vars["id"]
 	if !ok {
 		http.Error(w, "User ID is missing", http.StatusBadRequest)
