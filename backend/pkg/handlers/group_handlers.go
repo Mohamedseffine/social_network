@@ -258,12 +258,6 @@ func (app *App) AcceptGroupRequestHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vars := mux.Vars(r)
-	memberIDStr, ok := vars["id"]
-	if !ok {
-		http.Error(w, "Member ID is missing", http.StatusBadRequest)
-		return
-	}
 
 	memberID, err := strconv.ParseInt(memberIDStr, 10, 64)
 	if err != nil {
