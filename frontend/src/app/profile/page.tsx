@@ -39,12 +39,23 @@ const ProfilePage = () => {
 
         if (postsRes.ok) setPosts(await postsRes.json() || []);
         else setError(prev => `${prev}Failed to fetch posts. `);
+        if (postsRes.status == 401){
+                    router.push("/")
+        }
 
         if (followersRes.ok) setFollowers(await followersRes.json() || []);
         else setError(prev => `${prev}Failed to fetch followers. `);
+        if (followersRes.status == 401){
+                    router.push("/")
+
+        }
 
         if (followingRes.ok) setFollowing(await followingRes.json() || []);
         else setError(prev => `${prev}Failed to fetch following. `);
+        if (followingRes.status == 401 ){
+                    router.push("/")
+
+        }
 
       } catch (err: any) {
         setError(`An error occurred: ${err.message}`);
