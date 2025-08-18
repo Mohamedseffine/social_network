@@ -44,8 +44,11 @@ const ChatPage = () => {
   };
 
   useEffect(() => {
+     if (!user) {
+      router.push("/");
+    }
     fetchConversations();
-  }, [user]);
+  }, [user , router]);
 
   useEffect(() => {
     if (!lastChatMessage || !user) return;
@@ -145,7 +148,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="chat-container">
+    user !== null &&(<div className="chat-container">
       <div className="conversation-list">
         <h2>Conversations</h2>
         {conversations.map((conv) => (
@@ -204,7 +207,7 @@ const ChatPage = () => {
           </div>
         )}
       </div>
-    </div>
+    </div>)
   );
 };
 
