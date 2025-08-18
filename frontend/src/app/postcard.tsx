@@ -7,6 +7,7 @@ import { API_BASE_URL, getImageUrl } from "@/utils/api";
 
 
 import { Comment, CommentCard } from "./components/Comment";
+import { useRouter } from "next/navigation";
 export default function PostCard ({ post }: { post: any }) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [showComments, setShowComments] = useState(false);
@@ -14,6 +15,7 @@ export default function PostCard ({ post }: { post: any }) {
   const [commentContent, setCommentContent] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const router = useRouter()
   const showMessage = (msg: string, error: boolean = false) => {
     setMessage(msg);
     setIsError(error);
@@ -32,6 +34,9 @@ export default function PostCard ({ post }: { post: any }) {
       if (res.ok) {
         const data = await res.json();
         setComments(data || []);
+      }else if (res.status == 401){
+                  router.push("/")
+
       }
     } catch (err) {
       console.error("Failed to fetch comments", err);
@@ -67,6 +72,10 @@ export default function PostCard ({ post }: { post: any }) {
           imagePath = (await uploadRes.json()).path;
         } else {
           showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
+          if (uploadRes.status == 401){
+                      router.push("/")
+
+          }
           return;
         }
       } catch (err: any) {
@@ -90,6 +99,10 @@ export default function PostCard ({ post }: { post: any }) {
         fetchComments(); // Refresh comments
       } else {
         console.error("Failed to create comment");
+        if (res.status ==401){
+                    router.push("/")
+
+        }
       }
     } catch (err) {
       console.error("An error occurred while creating the comment", err);
