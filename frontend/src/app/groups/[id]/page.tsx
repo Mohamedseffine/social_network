@@ -212,6 +212,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         setAttendees(prev => ({ ...prev, [eventId]: data || [] }));
       } else {
         console.error("Failed to fetch attendees");
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err) {
       console.error("Error fetching attendees", err);
@@ -279,6 +283,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
       } else {
         const errorText = await res.text();
         setError(`Failed to send join request: ${errorText}`);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
@@ -301,6 +309,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
       } else {
         const errorText = await res.text();
         showPopup(`Failed to send invitation: ${errorText}`, 'error');
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       showPopup(`An error occurred: ${err.message}`, 'error');
@@ -327,6 +339,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
 
         } else {
           alert(`Image upload failed: ${await uploadRes.text()}`);
+          if (uploadRes.status == 401){
+                      router.push("/")
+
+          }
           return;
         }
       } catch (err: any) {
@@ -346,6 +362,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
         fetchMemberContent();
       } else {
         setError(`Failed to create post: ${await res.text()}`);
+        if (res.status == 401 ){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(`An error occurred: ${err.message}`);
@@ -391,6 +411,10 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
           alert(errtxt)
         } else {
           setError(`Failed to create event: ${errtxt}`);
+        }
+        if (res.status == 401){
+                    router.push("/")
+
         }
       }
     } catch (err: any) {
