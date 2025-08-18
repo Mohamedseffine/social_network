@@ -7,6 +7,7 @@ import { usePopup } from "../../context/PopupContext";
 import Picker from "emoji-picker-react";
 import type { EmojiClickData } from "emoji-picker-react";
 import "./Chat.css";
+import { useRouter } from "next/navigation";
 
 const ChatPage = () => {
   const { user, lastChatMessage, fetchNotifications, fetchUnreadMessageCount, sendMessage } = useAuth();
@@ -16,7 +17,7 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [showPicker, setShowPicker] = useState(false);
-
+  const router = useRouter()
   const onEmojiClick = (emojiData: EmojiClickData) => {
     setNewMessage((prevInput) => prevInput + emojiData.emoji);
     setShowPicker(false);
@@ -32,6 +33,9 @@ const ChatPage = () => {
         const data = await convRes.json();
         setConversations(data);
       } else {
+        if (convRes.status == 401){
+          router.push("/")
+        }
         console.error("Failed to fetch conversations");
       }
     } catch (error) {
