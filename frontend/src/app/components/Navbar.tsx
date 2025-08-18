@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL } from "../../utils/api";
-
 const Navbar = () => {
   const { user, logout, unreadNotifications, unreadMessages } = useAuth();
   const router = useRouter();
@@ -19,6 +18,7 @@ const Navbar = () => {
         logout();
         router.push("/"); // Redirect to homepage/login page
       } else {
+
         console.error("Logout failed");
       }
     } catch (err) {
