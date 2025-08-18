@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 import { usePopup } from "../../context/PopupContext";
 import { API_BASE_URL } from "../../utils/api";
-
+import { useRouter } from "next/navigation";
+const router = useRouter()
 const Notifications = () => {
   const { showPopup } = usePopup();
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -35,6 +36,9 @@ const Notifications = () => {
         setNotifications(data);
       } else {
         const errorText = await res.text();
+        if (res.status == 401){
+          router.push("/")
+        }
         setError(`Failed to fetch notifications: ${errorText}`);
       }
     } catch (err: any) {
@@ -59,6 +63,9 @@ const Notifications = () => {
         fetchNotificationsData(); // Refresh notifications and the count
       } else {
         const errorText = await res.text();
+        if (res.status==401){
+          router.push("/")
+        }
         showPopup(`Action failed: ${errorText}`, 'error');
       }
     } catch (err: any) {
