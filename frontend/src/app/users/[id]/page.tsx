@@ -31,6 +31,9 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
         credentials: "include",
       });
       if (!userRes.ok) throw new Error("Failed to fetch user data.");
+      if (userRes.status == 401){
+                  router.push("/")
+      }
       const userData = await userRes.json();
       setProfileUser(userData);
       setFollowStatus(userData.follow_status || "not_following");
@@ -45,12 +48,24 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
 
         if (postsRes.ok) setPosts(await postsRes.json() || []);
         else setError(prev => `${prev}Failed to fetch posts. `);
+        if (postsRes.status == 401 ){
+                    router.push("/")
+
+        }
 
         if (followersRes.ok) setFollowers(await followersRes.json() || []);
         else setError(prev => `${prev}Failed to fetch followers. `);
+        if (followersRes.status == 401){
+                    router.push("/")
+
+        }
 
         if (followingRes.ok) setFollowing(await followingRes.json() || []);
         else setError(prev => `${prev}Failed to fetch following. `);
+        if (followingRes.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -81,6 +96,10 @@ const UserProfilePage = ({ params }: { params: { id: string } }) => {
       } else {
         // Refetch user data to get the latest follow status
         fetchUserData();
+      if (res.status == 401){
+                  router.push("/")
+
+      }
       }
     } catch (err: any) {
       showPopup(`An error occurred: ${err.message}`, 'error');

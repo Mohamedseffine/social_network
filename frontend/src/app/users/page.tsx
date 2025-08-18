@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../../context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "../../utils/api";
+import { useRouter } from "next/navigation";
 
 const UsersPage = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -12,7 +13,7 @@ const UsersPage = () => {
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const { user: currentUser } = useAuth();
-
+  const router = useRouter()
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -24,6 +25,10 @@ const UsersPage = () => {
           setUsers(data);
           setFilteredUsers(data);
         } else {
+          if (res.status == 401){
+                      router.push("/")
+
+          }
           setError("Failed to fetch users.");
         }
       } catch (err) {

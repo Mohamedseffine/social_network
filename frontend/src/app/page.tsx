@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { API_BASE_URL, getImageUrl } from "@/utils/api";
 import PostCard from "@/app/postcard"
 import { Comment, CommentCard } from "./components/Comment";
+import { useRouter } from "next/navigation";
 
 
 
@@ -25,7 +26,7 @@ export default function Home() {
   const [postPrivacy, setPostPrivacy] = useState('public');
   const [followers, setFollowers] = useState<any[]>([]);
   const [selectedFollowers, setSelectedFollowers] = useState<number[]>([]);
-
+  const router = useRouter()
   const showMessage = (msg: string, error: boolean = false) => {
     setMessage(msg);
     setIsError(error);
@@ -51,6 +52,10 @@ export default function Home() {
         } else {
           setPosts(prev => isNewLoad ? newPosts : [...prev, ...newPosts]);
           setPage(currentPage + 1);
+          if (res.status == 401){
+                      router.push("/")
+
+          }
         }
       }
     } catch (err) {
@@ -75,6 +80,10 @@ export default function Home() {
         const data = await res.json();
         setFollowers(data || []);
       } else {
+        if (res.status == 401){
+                    router.push("/")
+
+        }
         console.error("Failed to fetch followers");
       }
     } catch (err) {
@@ -109,6 +118,10 @@ export default function Home() {
           imagePath = (await uploadRes.json()).path;
         } else {
           showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
+          if (uploadRes.status == 401){
+                      router.push("/")
+
+          }
           return;
         }
       } catch (err: any) {
@@ -136,6 +149,10 @@ export default function Home() {
         fetchFeedPosts(true); // Refetch feed posts
       } else {
         showMessage(`Failed to create post: ${await res.text()}`, true);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       showMessage(`An error occurred: ${err.message}`, true);
@@ -160,6 +177,10 @@ export default function Home() {
           avatarPath = (await uploadRes.json()).path;
         } else {
           showMessage(`Avatar upload failed: ${await uploadRes.text()}`, true);
+          if (uploadRes.status == 401){
+                      router.push("/")
+
+          }
           return;
         }
       } catch (err: any) {
@@ -192,6 +213,10 @@ export default function Home() {
         form.reset();
       } else {
         showMessage(`Registration failed: ${await res.text()}`, true);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       showMessage(`Registration failed: ${err.message}`, true);
@@ -214,6 +239,10 @@ export default function Home() {
         login(await res.json());
       } else {
         showMessage(`Login failed: ${await res.text()}`, true);
+        if (res.status == 401){
+                    router.push("/")
+
+        }
       }
     } catch (err: any) {
       showMessage(`Login failed: ${err.message}`, true);
