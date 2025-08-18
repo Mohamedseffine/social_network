@@ -6,8 +6,8 @@ import { useAuth } from "../../context/AuthContext";
 import { usePopup } from "../../context/PopupContext";
 import { API_BASE_URL } from "../../utils/api";
 import { useRouter } from "next/navigation";
-const router = useRouter()
 const Notifications = () => {
+  const router = useRouter()
   const { showPopup } = usePopup();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
