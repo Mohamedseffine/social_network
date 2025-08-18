@@ -1,6 +1,17 @@
 import Link from 'next/link';
 import { getImageUrl } from '@/utils/api';
 
+export interface Comment {
+  id: number;
+  post_id: number;
+  user_id: number;
+  author_first_name: string;
+  author_last_name: string;
+  author_avatar: string;
+  content: string;
+  image : string;
+  created_at: string;
+}
 
 export const CommentCard = ({ comment }: { comment: Comment }) => {
   return (
