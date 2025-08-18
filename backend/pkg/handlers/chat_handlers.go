@@ -24,7 +24,8 @@ func (app *App) GetConversationsHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-
+conversations := make([]Conversation, 0)
+    existingUsers := make(map[int64]bool)
 
 	// Get group conversations
 	rows, err := app.DB.Query(`
