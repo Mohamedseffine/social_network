@@ -7,9 +7,8 @@ import (
 	"log"
 	"net/http"
 	"social-network/backend/pkg/models"
+	"social-network/backend/pkg/router"
 	"strconv"
-
-	"github.com/gorilla/mux"
 )
 
 func (app *App) FollowUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -19,9 +18,8 @@ func (app *App) FollowUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	followedIDStr, ok := vars["id"]
-	if !ok {
+	followedIDStr := router.ForContext(r.Context(), "id")
+	if followedIDStr == "" {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
 		return
 	}
@@ -106,9 +104,8 @@ func (app *App) UnfollowUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	followedIDStr, ok := vars["id"]
-	if !ok {
+	followedIDStr := router.ForContext(r.Context(), "id")
+	if followedIDStr == "" {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
 		return
 	}
@@ -154,9 +151,8 @@ func (app *App) AcceptFollowRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	vars := mux.Vars(r)
-	requestIDStr, ok := vars["id"]
-	if !ok {
+	requestIDStr := router.ForContext(r.Context(), "id")
+	if requestIDStr == "" {
 		http.Error(w, "Request ID not provided", http.StatusBadRequest)
 		return
 	}
@@ -218,9 +214,8 @@ func (app *App) DeclineFollowRequestHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	vars := mux.Vars(r)
-	requestIDStr, ok := vars["id"]
-	if !ok {
+	requestIDStr := router.ForContext(r.Context(), "id")
+	if requestIDStr == "" {
 		http.Error(w, "Request ID not provided", http.StatusBadRequest)
 		return
 	}
@@ -267,9 +262,8 @@ func (app *App) DeclineFollowRequestHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *App) GetFollowersHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr, ok := vars["id"]
-	if !ok {
+	userIDStr := router.ForContext(r.Context(), "id")
+	if userIDStr == "" {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
 		return
 	}
@@ -307,9 +301,8 @@ func (app *App) GetFollowersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetFollowingHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr, ok := vars["id"]
-	if !ok {
+	userIDStr := router.ForContext(r.Context(), "id")
+	if userIDStr == "" {
 		http.Error(w, "User ID not provided", http.StatusBadRequest)
 		return
 	}

@@ -9,8 +9,7 @@ import (
 	"strconv"
 
 	"social-network/backend/pkg/models"
-
-	"github.com/gorilla/mux"
+	"social-network/backend/pkg/router"
 )
 
 type CreateGroupRequest struct {
@@ -113,9 +112,8 @@ func (app *App) GetGroupsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetGroupHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	groupIDStr, ok := vars["id"]
-	if !ok {
+	groupIDStr := router.ForContext(r.Context(), "id")
+	if groupIDStr == "" {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -150,9 +148,8 @@ func (app *App) GetGroupMembershipStatusHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	vars := mux.Vars(r)
-	groupIDStr, ok := vars["id"]
-	if !ok {
+	groupIDStr := router.ForContext(r.Context(), "id")
+	if groupIDStr == "" {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -188,9 +185,8 @@ func (app *App) JoinGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	groupIDStr, ok := vars["id"]
-	if !ok {
+	groupIDStr := router.ForContext(r.Context(), "id")
+	if groupIDStr == "" {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -258,9 +254,8 @@ func (app *App) AcceptGroupRequestHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vars := mux.Vars(r)
-	memberIDStr, ok := vars["id"]
-	if !ok {
+	memberIDStr := router.ForContext(r.Context(), "id")
+	if memberIDStr == "" {
 		http.Error(w, "Member ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -337,9 +332,8 @@ func (app *App) DeclineGroupRequestHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	vars := mux.Vars(r)
-	memberIDStr, ok := vars["id"]
-	if !ok {
+	memberIDStr := router.ForContext(r.Context(), "id")
+	if memberIDStr == "" {
 		http.Error(w, "Member ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -423,9 +417,8 @@ func (app *App) InviteToGroupHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	groupIDStr, ok := vars["id"]
-	if !ok {
+	groupIDStr := router.ForContext(r.Context(), "id")
+	if groupIDStr == "" {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -509,9 +502,8 @@ func (app *App) AcceptGroupInviteHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	vars := mux.Vars(r)
-	inviteIDStr, ok := vars["id"]
-	if !ok {
+	inviteIDStr := router.ForContext(r.Context(), "id")
+	if inviteIDStr == "" {
 		http.Error(w, "Invite ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -576,9 +568,8 @@ func (app *App) DeclineGroupInviteHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vars := mux.Vars(r)
-	inviteIDStr, ok := vars["id"]
-	if !ok {
+	inviteIDStr := router.ForContext(r.Context(), "id")
+	if inviteIDStr == "" {
 		http.Error(w, "Invite ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -648,9 +639,8 @@ func (app *App) CreateGroupPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	groupIDStr, ok := vars["id"]
-	if !ok {
+	groupIDStr := router.ForContext(r.Context(), "id")
+	if groupIDStr == "" {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -709,9 +699,8 @@ func (app *App) GetGroupPostsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	groupIDStr, ok := vars["id"]
-	if !ok {
+	groupIDStr := router.ForContext(r.Context(), "id")
+	if groupIDStr == "" {
 		http.Error(w, "Group ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -783,9 +772,8 @@ func (app *App) CreateGroupPostCommentHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	vars := mux.Vars(r)
-	postIDStr, ok := vars["id"]
-	if !ok {
+	postIDStr := router.ForContext(r.Context(), "id")
+	if postIDStr == "" {
 		http.Error(w, "Post ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -850,9 +838,8 @@ func (app *App) GetGroupPostCommentsHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	vars := mux.Vars(r)
-	postIDStr, ok := vars["id"]
-	if !ok {
+	postIDStr := router.ForContext(r.Context(), "id")
+	if postIDStr == "" {
 		http.Error(w, "Post ID is missing", http.StatusBadRequest)
 		return
 	}

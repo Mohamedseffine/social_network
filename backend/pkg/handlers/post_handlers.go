@@ -6,9 +6,8 @@ import (
 	"log"
 	"net/http"
 	"social-network/backend/pkg/models"
+	"social-network/backend/pkg/router"
 	"strconv"
-
-	"github.com/gorilla/mux"
 )
 
 type CreatePostRequest struct {
@@ -98,9 +97,8 @@ func (app *App) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetUserPostsHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	profileUserIDStr, ok := vars["id"]
-	if !ok {
+	profileUserIDStr := router.ForContext(r.Context(), "id")
+	if profileUserIDStr == "" {
 		http.Error(w, "User ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -187,9 +185,8 @@ func (app *App) CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-	postIDStr, ok := vars["id"]
-	if !ok {
+	postIDStr := router.ForContext(r.Context(), "id")
+	if postIDStr == "" {
 		http.Error(w, "Post ID is missing", http.StatusBadRequest)
 		return
 	}
@@ -232,9 +229,8 @@ func (app *App) CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *App) GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postIDStr, ok := vars["id"]
-	if !ok {
+	postIDStr := router.ForContext(r.Context(), "id")
+	if postIDStr == "" {
 		http.Error(w, "Post ID is missing", http.StatusBadRequest)
 		return
 	}
