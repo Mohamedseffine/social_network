@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useRef } from "react";
 import { API_BASE_URL } from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
@@ -17,7 +16,18 @@ const ChatPage = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [showPicker, setShowPicker] = useState(false);
-  const router = useRouter()
+  const router = useRouter();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const onEmojiClick = (emojiData: EmojiClickData) => {
     setNewMessage((prevInput) => prevInput + emojiData.emoji);
     setShowPicker(false);
@@ -45,15 +55,13 @@ const ChatPage = () => {
 
   useEffect(() => {
      if (!user) {
-      console.log("no users to fetch");
-      
+      console.log("No user to fetsh...");
     }
     fetchConversations();
   }, [user , router]);
 
   useEffect(() => {
     if (!lastChatMessage || !user) return;
-
     let messageBelongsToCurrentConversation = false;
     if (selectedConversation) {
       const [convType, convIdStr] = selectedConversation.id.split('-');
@@ -69,7 +77,6 @@ const ChatPage = () => {
         }
       }
     }
-
     if (messageBelongsToCurrentConversation) {
       if (lastChatMessage.sender_id !== user.id) {
           setMessages((prevMessages) => [...prevMessages, lastChatMessage]);
@@ -86,7 +93,6 @@ const ChatPage = () => {
     setMessages([]);
     const [type, id] = conversation.id.split('-');
     const queryParam = type === 'user' ? `user_id=${id}` : `group_id=${id}`;
-
     try {
       const res = await fetch(`${API_BASE_URL}/messages?${queryParam}`, {
         credentials: "include",
@@ -98,12 +104,10 @@ const ChatPage = () => {
         // Now, we need to re-fetch the counts to update the UI instantly.
         if (fetchUnreadMessageCount) fetchUnreadMessageCount();
         if (fetchNotifications) fetchNotifications();
-
         // Also update the unread count for this specific conversation in the local state
         setConversations(prev => prev.map(c =>
           c.id === conversation.id ? { ...c, unread_count: 0 } : c
         ));
-
       } else {
          if (res.status == 401){
           router.push("/")
@@ -120,10 +124,8 @@ const ChatPage = () => {
     if (!newMessage.trim() || !selectedConversation) {
       return;
     }
-
     const [type, idStr] = selectedConversation.id.split('-');
     const id = parseInt(idStr, 10);
-
     const message = {
       type: type === 'user' ? 'private_message' : 'group_message',
       payload: {
@@ -132,9 +134,7 @@ const ChatPage = () => {
         group_id: type === 'group' ? id : 0,
       },
     };
-
     sendMessage(message);
-
     if (user) {
         const optimisticMessage = {
             id: Date.now(),
@@ -177,6 +177,7 @@ const ChatPage = () => {
                   </div>
                 </div>
               ))}
+              <div ref={messagesEndRef} />
             </div>
             <form onSubmit={handleSendMessage} className="message-form">
               <input

@@ -37,5 +37,9 @@ func InitDB(dbPath string) *sql.DB {
 	}
 
 	fmt.Println("Database initialized and migrations applied.")
+	_, err = db.Exec(`pragma foreign_keys = on`)
+	if err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 	return db
 }
