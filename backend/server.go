@@ -3,12 +3,10 @@ package main
 import (
 	"log"
 	"net/http"
-
 	"social-network/backend/pkg/db/sqlite"
 	"social-network/backend/pkg/handlers"
+	"social-network/backend/pkg/router"
 	"social-network/backend/pkg/websockets"
-
-	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -19,90 +17,64 @@ func main() {
 	go hub.Run()
 	app := &handlers.App{DB: db, Hub: hub}
 
-	r := mux.NewRouter()
+	r := router.NewRouter(db)
 
-	// Use CORS middleware for all routes
-	r.Use(handlers.CORS)
-
-	// Subrouter for API
-	apiRouter := r.PathPrefix("/api").Subrouter()
-
-	// Auth routes
-	apiRouter.HandleFunc("/register", app.RegisterHandler).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/login", app.LoginHandler).Methods("POST", "OPTIONS")
-	apiRouter.HandleFunc("/upload", app.UploadImageHandler).Methods("POST", "OPTIONS") //deplacer ici pour marche
+	// Public routes
+	r.Handle("POST", "/api/register", app.RegisterHandler)
+	r.Handle("POST", "/api/login", app.LoginHandler)
+	r.Handle("POST", "/api/upload", app.UploadImageHandler)
 
 	// Authenticated routes
-	authRouter := apiRouter.PathPrefix("/").Subrouter()
-	authRouter.Use(app.Authenticate)
-	authRouter.HandleFunc("/logout", app.LogoutHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/users/{id}/follow", app.FollowUserHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/users/{id}/unfollow", app.UnfollowUserHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/requests/{id}/accept", app.AcceptFollowRequestHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/requests/{id}/decline", app.DeclineFollowRequestHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/users", app.GetAllUsersHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/users/{id}", app.GetUserHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/users/online", app.GetOnlineUsersHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/users/{id}/followers", app.GetFollowersHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/users/{id}/following", app.GetFollowingHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/users/{id}/posts", app.GetUserPostsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/posts", app.CreatePostHandler).Methods("POST", "OPTIONS")
-	// Comments routes
-	authRouter.HandleFunc("/posts/{id}/comments", app.CreateCommentHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/posts/{id}/comments", app.GetCommentsHandler).Methods("GET", "OPTIONS")
-
-	// Group routes
-	authRouter.HandleFunc("/groups", app.CreateGroupHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups", app.GetGroupsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}", app.GetGroupHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}/membership", app.GetGroupMembershipStatusHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}/join", app.JoinGroupHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/requests/{id}/accept", app.AcceptGroupRequestHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/requests/{id}/decline", app.DeclineGroupRequestHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}/invite", app.InviteToGroupHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/invites/{id}/accept", app.AcceptGroupInviteHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/invites/{id}/decline", app.DeclineGroupInviteHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}/posts", app.CreateGroupPostHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}/posts", app.GetGroupPostsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/group-posts/{id}/comments", app.CreateGroupPostCommentHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/group-posts/{id}/comments", app.GetGroupPostCommentsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/search_groups", app.SearchGroupsHandler).Methods("GET", "OPTIONS")
-
-	// Event routes
-	authRouter.HandleFunc("/groups/{id}/events", app.CreateEventHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/groups/{id}/events", app.GetGroupEventsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/events/{id}/respond", app.RespondToEventHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/events/{id}/attendees", app.GetEventAttendeesHandler).Methods("GET", "OPTIONS")
-
-	// Notification routes
-	authRouter.HandleFunc("/notifications", app.GetNotificationsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/notifications/unread-count", app.GetUnreadNotificationCountHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/notifications/read-all", app.MarkAllNotificationsAsReadHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/notifications/{id}/read", app.MarkNotificationAsReadHandler).Methods("POST", "OPTIONS")
-	authRouter.HandleFunc("/notifications/{id}", app.DeleteNotificationHandler).Methods("DELETE", "OPTIONS")
-
-	// WebSocket route
-	authRouter.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	authMiddleware := app.Authenticate
+	r.Handle("POST", "/api/logout", app.LogoutHandler, authMiddleware)
+	r.Handle("POST", "/api/users/{id}/follow", app.FollowUserHandler, authMiddleware)
+	r.Handle("POST", "/api/users/{id}/unfollow", app.UnfollowUserHandler, authMiddleware)
+	r.Handle("POST", "/api/requests/{id}/accept", app.AcceptFollowRequestHandler, authMiddleware)
+	r.Handle("POST", "/api/requests/{id}/decline", app.DeclineFollowRequestHandler, authMiddleware)
+	r.Handle("GET", "/api/users", app.GetAllUsersHandler, authMiddleware)
+	r.Handle("GET", "/api/users/{id}", app.GetUserHandler, authMiddleware)
+	r.Handle("GET", "/api/users/online", app.GetOnlineUsersHandler, authMiddleware)
+	r.Handle("GET", "/api/users/{id}/followers", app.GetFollowersHandler, authMiddleware)
+	r.Handle("GET", "/api/users/{id}/following", app.GetFollowingHandler, authMiddleware)
+	r.Handle("GET", "/api/users/{id}/posts", app.GetUserPostsHandler, authMiddleware)
+	r.Handle("POST", "/api/posts", app.CreatePostHandler, authMiddleware)
+	r.Handle("POST", "/api/posts/{id}/comments", app.CreateCommentHandler, authMiddleware)
+	r.Handle("GET", "/api/posts/{id}/comments", app.GetCommentsHandler, authMiddleware)
+	r.Handle("POST", "/api/groups", app.CreateGroupHandler, authMiddleware)
+	r.Handle("GET", "/api/groups", app.GetGroupsHandler, authMiddleware)
+	r.Handle("GET", "/api/groups/{id}", app.GetGroupHandler, authMiddleware)
+	r.Handle("GET", "/api/groups/{id}/membership", app.GetGroupMembershipStatusHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/{id}/join", app.JoinGroupHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/requests/{id}/accept", app.AcceptGroupRequestHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/requests/{id}/decline", app.DeclineGroupRequestHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/{id}/invite", app.InviteToGroupHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/invites/{id}/accept", app.AcceptGroupInviteHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/invites/{id}/decline", app.DeclineGroupInviteHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/{id}/posts", app.CreateGroupPostHandler, authMiddleware)
+	r.Handle("GET", "/api/groups/{id}/posts", app.GetGroupPostsHandler, authMiddleware)
+	r.Handle("POST", "/api/group-posts/{id}/comments", app.CreateGroupPostCommentHandler, authMiddleware)
+	r.Handle("GET", "/api/group-posts/{id}/comments", app.GetGroupPostCommentsHandler, authMiddleware)
+	r.Handle("GET", "/api/search_groups", app.SearchGroupsHandler, authMiddleware)
+	r.Handle("POST", "/api/groups/{id}/events", app.CreateEventHandler, authMiddleware)
+	r.Handle("GET", "/api/groups/{id}/events", app.GetGroupEventsHandler, authMiddleware)
+	r.Handle("POST", "/api/events/{id}/respond", app.RespondToEventHandler, authMiddleware)
+	r.Handle("GET", "/api/events/{id}/attendees", app.GetEventAttendeesHandler, authMiddleware)
+	r.Handle("GET", "/api/notifications", app.GetNotificationsHandler, authMiddleware)
+	r.Handle("GET", "/api/notifications/unread-count", app.GetUnreadNotificationCountHandler, authMiddleware)
+	r.Handle("POST", "/api/notifications/read-all", app.MarkAllNotificationsAsReadHandler, authMiddleware)
+	r.Handle("POST", "/api/notifications/{id}/read", app.MarkNotificationAsReadHandler, authMiddleware)
+	r.Handle("DELETE", "/api/notifications/{id}", app.DeleteNotificationHandler, authMiddleware)
+	r.Handle("GET", "/api/ws", func(w http.ResponseWriter, r *http.Request) {
 		app.ServeWs(hub, w, r)
-	})
+	}, authMiddleware)
+	r.Handle("GET", "/api/conversations", app.GetConversationsHandler, authMiddleware)
+	r.Handle("GET", "/api/messages", app.GetMessagesHandler, authMiddleware)
+	r.Handle("GET", "/api/messages/unread-count", app.GetUnreadMessageCountHandler, authMiddleware)
+	r.Handle("POST", "/api/messages/read-all", app.MarkAllMessagesAsReadHandler, authMiddleware)
+	r.Handle("POST", "/api/profile/privacy", app.UpdateProfilePrivacyHandler, authMiddleware)
+	r.Handle("GET", "/api/session/me", app.GetSessionUserHandler, authMiddleware)
+	r.Handle("GET", "/api/feed", app.GetFeedHandler, authMiddleware)
 
-	// Chat routes
-	authRouter.HandleFunc("/conversations", app.GetConversationsHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/messages", app.GetMessagesHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/messages/unread-count", app.GetUnreadMessageCountHandler).Methods("GET", "OPTIONS")
-	authRouter.HandleFunc("/messages/read-all", app.MarkAllMessagesAsReadHandler).Methods("POST", "OPTIONS")
-
-	// Profile privacy route
-	authRouter.HandleFunc("/profile/privacy", app.UpdateProfilePrivacyHandler).Methods("POST", "OPTIONS")
-
-	// Session route
-	authRouter.HandleFunc("/session/me", app.GetSessionUserHandler).Methods("GET", "OPTIONS")
-
-	// Feed route
-	authRouter.HandleFunc("/feed", app.GetFeedHandler).Methods("GET", "OPTIONS")
-
-	// Serve static files
-	r.PathPrefix("/uploads/").Handler(http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	log.Println("Server is listening on port 8080...")
 	if err := http.ListenAndServe(":8080", r); err != nil {

@@ -1,82 +1,130 @@
 package router
 
 import (
+	"context"
+	"database/sql"
 	"net/http"
 	"strings"
 )
 
+type Route struct {
+	Handler    http.HandlerFunc
+	Middleware []func(http.Handler) http.Handler
+}
+
 type Router struct {
-	Routes        map[string]http.HandlerFunc
+	DB     *sql.DB
+	Routes map[string]map[string]*Route
 }
 
-
-
-func (router *Router) AddRoute(method string, path string, handler http.HandlerFunc) {
-	route := strings.ToLower(method + ":" + path)
-	router.Routes[route] = handler
-}
-
-func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	frontEndPaths := map[string]bool{
-		"/register": true,
-		"/login":    true,
+func NewRouter(db *sql.DB) *Router {
+	return &Router{
+		DB:     db,
+		Routes: make(map[string]map[string]*Route),
 	}
+}
 
+func (r *Router) Handle(method, path string, handler http.HandlerFunc, middleware ...func(http.Handler) http.Handler) {
+	if r.Routes[method] == nil {
+		r.Routes[method] = make(map[string]*Route)
+	}
+	r.Routes[method][path] = &Route{
+		Handler:    handler,
+		Middleware: middleware,
+	}
+}
+
+func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// CORS headers
-	origin := r.Header.Get("Origin")
+	origin := req.Header.Get("Origin")
 	w.Header().Set("Access-Control-Allow-Origin", origin)
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-	if r.Method == "OPTIONS" {
+	if req.Method == "OPTIONS" {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	// Check session
-	isValid := false
-	session, err := r.Cookie("session_token")
-	if err == nil && session != nil {
-		isValid = router.usersSessions.IsValidSession(session.Value)
-	}
-
-	// If the user is logged in and tries to go to login or register -> redirect to home
-	if frontEndPaths[r.URL.Path] && r.Method == "GET" {
-		if isValid {
-			http.Redirect(w, r, "/", http.StatusFound)
-		} else {
-			http.ServeFile(w, r, "../frontend/index.html")
-		}
-		return
-	}
-
-	// If user is not logged in and tries to go to home
-	if r.Method == "GET" && (r.URL.Path == "/" || r.URL.Path == "/index.html") {
-		if !isValid {
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-		http.ServeFile(w, r, "../frontend/index.html")
-		return
-	}
-
 	// Serve static files
-	if r.Method == "GET" {
-		if strings.HasSuffix(r.URL.Path, ".css") || strings.HasSuffix(r.URL.Path, ".js") || strings.HasSuffix(r.URL.Path, ".png") {
-			http.ServeFile(w, r, "../frontend"+r.URL.Path)
-			return
-		}
-		// http.ServeFile(w, r, "../front/index.html")
-		// return
+	if strings.HasPrefix(req.URL.Path, "/uploads/") {
+		http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))).ServeHTTP(w, req)
+		return
 	}
-
-	// Handle registered routes
-	route := strings.ToLower(r.Method + ":" + r.URL.Path)
-	if handler, ok := router.Routes[route]; ok {
-		handler(w, r)
+	if strings.HasPrefix(req.URL.Path, "/assets/") || strings.HasPrefix(req.URL.Path, "/vite.svg") {
+		http.ServeFile(w, req, "../frontend/dist"+req.URL.Path)
 		return
 	}
 
-	// Not found
-	http.ServeFile(w, r, "../frontend/index.html")
+	// Find handler
+	var handler http.Handler
+	var route *Route
+	var params map[string]string
+
+	if methodRoutes, ok := r.Routes[req.Method]; ok {
+		// Exact match first
+		if rt, ok := methodRoutes[req.URL.Path]; ok {
+			route = rt
+			handler = rt.Handler
+		} else {
+			// Parameterized route matching
+			for pathTemplate, rt := range methodRoutes {
+				templateParts := strings.Split(pathTemplate, "/")
+				requestParts := strings.Split(req.URL.Path, "/")
+
+				if len(templateParts) != len(requestParts) {
+					continue
+				}
+
+				match := true
+				params = make(map[string]string)
+				for i, part := range templateParts {
+					if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") {
+						paramName := strings.Trim(part, "{}")
+						params[paramName] = requestParts[i]
+					} else if part != requestParts[i] {
+						match = false
+						break
+					}
+				}
+
+				if match {
+					route = rt
+					handler = rt.Handler
+					// Add params to request context
+					ctx := req.Context()
+					for k, v := range params {
+						ctx = context.WithValue(ctx, k, v)
+					}
+					req = req.WithContext(ctx)
+					break
+				}
+			}
+		}
+	}
+
+	if handler != nil {
+		// Apply middleware
+		if route != nil {
+			for i := len(route.Middleware) - 1; i >= 0; i-- {
+				handler = route.Middleware[i](handler)
+			}
+		}
+		handler.ServeHTTP(w, req)
+		return
+	}
+
+	// Serve frontend index.html for all other GET requests that are not API calls
+	if req.Method == "GET" && !strings.HasPrefix(req.URL.Path, "/api/") {
+		http.ServeFile(w, req, "../frontend/dist/index.html")
+		return
+	}
+
+	http.NotFound(w, req)
+}
+
+func ForContext(ctx context.Context, key string) string {
+	value, _ := ctx.Value(key).(string)
+	return value
 }
