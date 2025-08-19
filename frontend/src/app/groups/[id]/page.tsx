@@ -6,6 +6,7 @@ import { API_BASE_URL, getImageUrl } from "../../../utils/api";
 import { usePopup } from "../../../context/PopupContext";
 import { Comment, CommentCard } from "../../components/Comment";
 import { useAuth } from "@/context/AuthContext";
+import Popup from "@/app/components/Popup"
 
 const GroupPage = ({ params }: { params: { id: string } }) => {
   const { showPopup } = usePopup();
@@ -340,7 +341,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
           console.log(imagePath);
 
         } else {
-          alert(`Image upload failed: ${await uploadRes.text()}`);
+          showPopup(`Image upload failed`,"error");
           if (uploadRes.status == 401){
                       router.push("/")
 
@@ -348,7 +349,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
           return;
         }
       } catch (err: any) {
-        alert(`Image upload failed: ${err.message}`);
+        showPopup(`Image upload failed: ${err.message}`,"error");
         return;
       }
     }
@@ -390,7 +391,8 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
       return !isNaN(Date.parse(dateString));
     }
     if (!isValidDate(event_time_str)) {
-      alert("invalid date value")
+            showPopup(`invalid date`,"error");
+
       return
     }
 
@@ -410,7 +412,8 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
       } else {
         let errtxt = await res.text()
         if (errtxt.trim() === "Event time must be in the future".trim()) {
-          alert(errtxt)
+          showPopup(errtxt,"error");  
+          
         } else {
           setError(`Failed to create event: ${errtxt}`);
         }
