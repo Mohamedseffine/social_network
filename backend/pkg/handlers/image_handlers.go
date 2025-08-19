@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gofrs/uuid"
 )
@@ -52,7 +53,7 @@ func (app *App) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 	var count int
-	imagePath := r.URL.Path
+	imagePath := strings.TrimSpace(r.URL.Path)
 	currentUserID := ForContext(r.Context())
 	if currentUserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -69,7 +70,7 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if count > 0 {
-		http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))
+		http.ServeFile(w, r, "."+r.URL.Path)
 		return
 	}
 
@@ -84,34 +85,7 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if count > 0 {
-		var status int
-		var pPrivacy string
-		var postId int
-		var creatorID int64
-		stM, err := app.DB.Prepare(`
-		SELECT u.profile_is_public , p.privacy , p.id , p.user_id
-		FROM posts p 
-		INNER JOIN users u ON p.user_id = u.id 
-		WHERE p.image = ?
-		`)
-		if err != nil {
-			http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = stM.QueryRow(imagePath).Scan(&status, &pPrivacy, &postId, &creatorID)
-		if err != nil {
-			http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		is_following, err := app.isFollowing(currentUserID, creatorID)
-		if err != nil {
-			http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if creatorID == currentUserID || (pPrivacy == "public" && (status == 1 || is_following)) || (app.CanSeePost(int(currentUserID), postId)) || (is_following && pPrivacy == "almost private") {
-			http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))
-			return
-		}
+		app.CanSeePostImage(w, r, imagePath, currentUserID)
 		return
 	}
 	stm1, err := app.DB.Prepare(`SELECT COUNT (id) FROM comments WHERE image_url = ? `)
@@ -154,6 +128,79 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if count > 0 {
 
+		return
+	}
+}
+
+func (app *App) CanSeePostImage(w http.ResponseWriter, r *http.Request, imagePath string, currentUserID int64) {
+	var status int
+	var pPrivacy string
+	var postId int
+	var creatorID int64
+	stM, err := app.DB.Prepare(`
+		SELECT u.profile_is_public , p.privacy , p.id , p.user_id
+		FROM posts p 
+		INNER JOIN users u ON p.user_id = u.id 
+		WHERE p.image = ?
+		`)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = stM.QueryRow(imagePath).Scan(&status, &pPrivacy, &postId, &creatorID)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	is_following, err := app.isFollowing(currentUserID, creatorID)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if creatorID == currentUserID || (pPrivacy == "public" && (status == 1 || is_following)) || (app.CanSeePost(int(currentUserID), postId)) || (is_following && pPrivacy == "almost private") {
+		http.ServeFile(w, r, "."+imagePath)
+		return
+	}
+}
+
+func (app *App) CanSeeCommentImage(w http.ResponseWriter, r *http.Request, imagePath string, currentUserID int64) {
+	var postId int
+	var status int
+	var pPrivacy string
+	var creatorID int64
+	stm, err := app.DB.Prepare(`SELECT post_id FROM comments WHERE image_url = ?`)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = stm.QueryRow(imagePath).Scan(&postId)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	stM, err := app.DB.Prepare(`
+		SELECT u.profile_is_public , p.privacy ,  p.user_id
+		FROM posts p 
+		INNER JOIN users u ON p.user_id = u.id 
+		WHERE p.id  = ?
+		`)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = stM.QueryRow(imagePath).Scan(&status, &pPrivacy, &creatorID)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	is_following, err := app.isFollowing(currentUserID, creatorID)
+	if err != nil {
+		http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if creatorID == currentUserID || (pPrivacy == "public" && (status == 1 || is_following)) || (app.CanSeePost(int(currentUserID), postId)) || (is_following && pPrivacy == "almost private") {
+		http.ServeFile(w, r, "."+imagePath)
 		return
 	}
 }
