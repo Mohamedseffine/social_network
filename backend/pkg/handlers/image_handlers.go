@@ -152,6 +152,6 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
-func CanSeePost(id int, ){
-	
+func (app *App) CanSeePost(id int, ){
+	stm, err:=
 }
