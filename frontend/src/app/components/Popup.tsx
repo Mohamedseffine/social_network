@@ -11,7 +11,7 @@ const Popup: React.FC<PopupProps> = ({ message, type, onClose }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       onClose();
-    }, 5000); // Auto-close after 5 seconds
+    }, 3000); // Auto-close after 5 seconds
 
     return () => {
       clearTimeout(timer);
