@@ -50,13 +50,40 @@ func (app *App) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"path": filePath})
 }
 
-
-
 func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
+	var count int
+	imagePath := r.URL.Path
 	currentUserID := ForContext(r.Context())
 	if currentUserID == 0 {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
-	
+	stm, err := app.DB.Prepare(`SELECT COUNT (id) FROM posts WHERE image = ? `)
+	if err != nil {
+		http.Error(w, "Image Doesn't Exist", http.StatusNotFound)
+		return
+	}
+	err = stm.QueryRow(imagePath).Scan(&count)
+	if err != nil {
+		http.Error(w, "Image Doesn't Exist", http.StatusNotFound)
+		return
+	}
+	if count>0 {
+		
+		return
+	}
+	stm1, err := app.DB.Prepare(`SELECT COUNT (id) FROM comments WHERE image_url = ? `)
+	if err != nil {
+		http.Error(w, "Image Doesn't Exist", http.StatusNotFound)
+		return
+	}
+	err = stm1.QueryRow(imagePath).Scan(&count)
+	if err != nil {
+		http.Error(w, "Image Doesn't Exist", http.StatusNotFound)
+		return
+	}
+	if count>0 {
+		
+		return
+	}
 }
