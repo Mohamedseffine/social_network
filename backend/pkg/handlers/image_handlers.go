@@ -86,8 +86,10 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 	if count > 0 {
 		var status int
 		var pPrivacy string
+		var postId int
+		var creatorID int64
 		stM, err := app.DB.Prepare(`
-		SELECT u.profile_is_public , p.privacy
+		SELECT u.profile_is_public , p.privacy , p.id , p.user_id
 		FROM posts p 
 		INNER JOIN users u ON p.user_id = u.id 
 		WHERE p.image = ?
@@ -96,12 +98,17 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = stM.QueryRow(imagePath).Scan(&status, &pPrivacy)
+		err = stM.QueryRow(imagePath).Scan(&status, &pPrivacy, &postId, &creatorID)
 		if err != nil {
 			http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
 			return
 		}
-		if status == 1 && pPrivacy == "public" {
+		is_following, err := app.isFollowing(currentUserID, creatorID)
+		if err != nil {
+			http.Error(w, "error:"+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if creatorID == currentUserID || (pPrivacy == "public" && (status == 1 || is_following)) || (app.CanSeePost(int(currentUserID), postId)) || (is_following && pPrivacy == "almost private") {
 			http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads")))
 			return
 		}
@@ -151,7 +158,17 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (app *App) CanSeePost(Userid, postId int) bool {
+	var count int
+	stm, err := app.DB.Prepare(`SELECT COUNT (*) FROM post_viewer WHERE post_id = ? AND viewer_id = ?`)
+	if err != nil {
+		return false
+	}
+	err = stm.QueryRow(postId, Userid).Scan(&count)
+	if err != nil {
+		return false
+	}
 
-func (app *App) CanSeePost(id int, ){
-	stm, err:=
+	return count > 0
+
 }

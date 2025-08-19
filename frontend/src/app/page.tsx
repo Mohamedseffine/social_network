@@ -119,7 +119,7 @@ export default function Home() {
         } else {
           showMessage(`Image upload failed: ${await uploadRes.text()}`, true);
           if (uploadRes.status == 401){
-                      router.push("/")
+            router.push("/")
 
           }
           return;
@@ -132,6 +132,10 @@ export default function Home() {
 
     const postData: any = { content, privacy, image: imagePath };
     if (postPrivacy === 'private') {
+      if (selectedFollowers.length < 1) {
+        alert("please select at least one user")
+        return
+      }
       postData.viewer_ids = selectedFollowers;
     }
 
