@@ -49,3 +49,14 @@ func (app *App) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"path": filePath})
 }
+
+
+
+func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
+	currentUserID := ForContext(r.Context())
+	if currentUserID == 0 {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	
+}
