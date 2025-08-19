@@ -23,6 +23,7 @@ func main() {
 	r.Handle("POST", "/api/register", app.RegisterHandler)
 	r.Handle("POST", "/api/login", app.LoginHandler)
 	r.Handle("POST", "/api/upload", app.UploadImageHandler)
+	r.Handle("GET", "/uploads/{path}", app.GetImageHandler)
 
 	// Authenticated routes
 	authMiddleware := app.Authenticate
@@ -74,7 +75,6 @@ func main() {
 	r.Handle("POST", "/api/profile/privacy", app.UpdateProfilePrivacyHandler, authMiddleware)
 	r.Handle("GET", "/api/session/me", app.GetSessionUserHandler, authMiddleware)
 	r.Handle("GET", "/api/feed", app.GetFeedHandler, authMiddleware)
-
 
 	log.Println("Server is listening on port 8080...")
 	if err := http.ListenAndServe(":8080", r); err != nil {

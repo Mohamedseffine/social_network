@@ -3,7 +3,6 @@ package router
 import (
 	"context"
 	"database/sql"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -49,11 +48,10 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Serve static files
-	if strings.HasPrefix(req.URL.Path, "/uploads/") {
-		log.Println(req.URL.Path)
-		http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))).ServeHTTP(w, req)
-		return
-	}
+	// if strings.HasPrefix(req.URL.Path, "/uploads/") {
+	// 	http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))).ServeHTTP(w, req)
+	// 	return
+	// }
 	if strings.HasPrefix(req.URL.Path, "/assets/") || strings.HasPrefix(req.URL.Path, "/vite.svg") {
 		http.ServeFile(w, req, "../frontend/dist"+req.URL.Path)
 		return

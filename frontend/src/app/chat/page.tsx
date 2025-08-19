@@ -45,7 +45,8 @@ const ChatPage = () => {
 
   useEffect(() => {
      if (!user) {
-      router.push("/");
+      console.log("no users to fetch");
+      
     }
     fetchConversations();
   }, [user , router]);
