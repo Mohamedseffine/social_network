@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"social-network/backend/pkg/models"
 	"social-network/backend/pkg/router"
@@ -673,8 +674,11 @@ func (app *App) CreateGroupPostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	log.Println(req.Image)
-
+	req.Content = strings.TrimSpace(req.Content)
+	if req.Content == "" {
+		http.Error(w, "empty content", http.StatusBadRequest)
+		return
+	}
 	stmt, err := app.DB.Prepare("INSERT INTO group_posts (group_id, user_id, content, image) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		http.Error(w, "Failed to prepare statement", http.StatusInternalServerError)
@@ -809,8 +813,9 @@ func (app *App) CreateGroupPostCommentHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	req.Content = strings.TrimSpace(req.Content)
 	if req.Content == "" {
-		http.Error(w, "Comment content cannot be empty", http.StatusBadRequest)
+		http.Error(w, "empty content", http.StatusBadRequest)
 		return
 	}
 

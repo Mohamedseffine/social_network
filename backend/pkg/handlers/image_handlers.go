@@ -23,7 +23,18 @@ func (app *App) UploadImageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer file.Close()
-
+	buffer := make([]byte, 512)
+	n, err := file.Read(buffer)
+	if err != nil && err != io.EOF {
+		http.Error(w, "Error reading file", http.StatusInternalServerError)
+		return
+	}
+	contentType := http.DetectContentType(buffer[:n])
+	if !strings.HasPrefix(contentType, "image") {
+		http.Error(w, "the file inserted is not an image", http.StatusBadRequest)
+		return
+	}
+	file.Seek(0, 0)
 	// Create a unique filename
 	ext := filepath.Ext(handler.Filename)
 	newUUID, err := uuid.NewV4()
@@ -145,6 +156,7 @@ func (app *App) GetImageHandler(w http.ResponseWriter, r *http.Request) {
 		app.CanSeeGroupPostCommentImage(w, r, imagePath, currentUserID)
 		return
 	}
+	http.Error(w, "image not found", http.StatusNotFound)
 }
 
 func (app *App) CanSeePostImage(w http.ResponseWriter, r *http.Request, imagePath string, currentUserID int64) {

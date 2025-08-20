@@ -4,9 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"net/http"
 	"social-network/backend/pkg/auth"
 	"social-network/backend/pkg/models"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -40,6 +43,12 @@ func (app *App) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	if bDate.After(time.Now().Add(-18*365*24*time.Hour)) || bDate.Before(time.Now().Add(-120*365*24*time.Hour)) {
 		http.Error(w, "You must be at least 18 years old and you cant be older than 120 years old to register", http.StatusBadRequest)
 		return
+	}
+	req.Nickname = strings.TrimSpace(req.Nickname)
+	if req.Nickname == "" {
+		rand.NewSource(int64(time.Now().Nanosecond()))
+		number := rand.Intn(1001)
+		req.Nickname = string(req.FirstName[0]) + req.LastName + strconv.Itoa(number)
 	}
 	hashedPassword, err := auth.HashPassword(req.Password)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	"social-network/backend/pkg/models"
 	"social-network/backend/pkg/router"
 	"strconv"
+	"strings"
 )
 
 type CreatePostRequest struct {
@@ -27,6 +28,11 @@ func (app *App) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 	var req CreatePostRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	req.Content = strings.TrimSpace(req.Content)
+	if req.Content == "" {
+		http.Error(w, "empty content", http.StatusBadRequest)
 		return
 	}
 	tx, err := app.DB.Begin()
@@ -58,6 +64,10 @@ func (app *App) CreatePostHandler(w http.ResponseWriter, r *http.Request) {
 
 	// If post is private, validate viewer IDs and insert into post_viewers
 	if req.Privacy == "private" {
+		if len(req.ViewerIDs) < 1 {
+			http.Error(w, "empty followers list", http.StatusBadRequest)
+			return
+		}
 		// Server-side validation: ensure all viewerIDs are actual followers
 		for _, viewerID := range req.ViewerIDs {
 			isFollower, err := app.isFollowing(viewerID, userID)
@@ -207,8 +217,9 @@ func (app *App) CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	payload.Content = strings.TrimSpace(payload.Content)
 	if payload.Content == "" {
-		http.Error(w, "Comment content cannot be empty", http.StatusBadRequest)
+		http.Error(w, "empty content", http.StatusBadRequest)
 		return
 	}
 
