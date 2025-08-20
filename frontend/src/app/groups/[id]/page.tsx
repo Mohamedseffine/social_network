@@ -455,6 +455,7 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
                   <input type="datetime-local" name="event_time" required />
                   <button type="submit">Create Event</button>
                 </form>
+                {error&&<div className="error" >{error}</div>}
               </div>
             )}
           </div>
@@ -575,7 +576,6 @@ const GroupPage = ({ params }: { params: { id: string } }) => {
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="error">{error}</div>;
   if (!group) return <div>Group not found.</div>;
 
   return (
